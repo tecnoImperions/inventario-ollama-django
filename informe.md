@@ -321,3 +321,19 @@ Las principales dificultades durante la sincronizacion con la API local de Ollam
 - Respuestas largas o truncadas: al pedir listas de productos, el modelo a veces devolvia tablas Markdown incompletas o simbolos de moneda inconsistentes. Se mejoro el SYSTEM en Modelfile.txt (temperatura 0.1, num_predict limitado, respuesta estructurada) y se priorizo el fallback determinista para preguntas de listados.
 
 El uso de variables de entorno y .env permitio desacoplar la configuracion de Ollama del codigo, facilitando el despliegue en diferentes equipos. La combinacion de validaciones en modelo y formulario garantiza la integridad de los datos, y las pruebas unitarias verifican que el sistema se mantiene estable ante cambios futuros.
+
+
+## USO DE OPENCODE COMO ASISTENTE DE DESARROLLO
+
+Durante el desarrollo de Pingux POS, se utilizo OpenCode directamente desde la terminal MiniOS (Debian 12) como asistente de codificacion.
+
+### Sesiones y Prompts Clave:
+1. **Generacion de validaciones en forms.py:**
+   - *Prompt:* "Ayudame a estructurar los metodos clean_codigo y clean_precio en ProductoForm para asegurar que no existan codigos duplicados (case-insensitive) ni valores negativos."
+   - *Impacto:* OpenCode genero de forma rapida la logica de exclusion de la instancia actual en caso de edicion, optimizando el tiempo de desarrollo.
+2. **Implementacion del patron Strategy para reportes:**
+   - *Prompt:* "Disena un diccionario de estrategias en Python para gestionar 8 tipos de reportes predefinidos de inventario sin usar multiples condicionales if-else."
+   - *Impacto:* Codigo limpio, mantenible y escalable.
+3. **Manejo de excepciones HTTP y Fallback para Ollama:**
+   - *Prompt:* "Escribe un bloque try-except usando httpx que capture errores 404 (modelo no registrado) y timeouts, devolviendo un fallback con datos de SQLite."
+   - *Impacto:* Garantizo que la aplicacion nunca se caiga si el servidor local de Ollama esta apagado o saturado.
