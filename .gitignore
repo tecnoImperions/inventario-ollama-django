@@ -1,0 +1,22 @@
+# Entorno virtual (se crea con instalar.sh, nunca se versiona)
+venv/
+.venv/
+env/
+
+# Cache de Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Configuracion local (copiar de .env.example)
+.env
+
+# Editores / sistema operativo
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# NOTA: db.sqlite3 e informe.pdf SI se versionan a proposito:
+#   - db.sqlite3  -> para que el sistema abra con datos de ejemplo.
+#   - informe.pdf -> es un entregable del coursework.

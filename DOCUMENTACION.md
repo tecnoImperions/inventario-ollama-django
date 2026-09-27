@@ -1,5 +1,9 @@
 # DOCUMENTACION.md - Pingux POS
 
+> **No necesitas leer esto para usar el proyecto.** Para instalarlo y arrancarlo,
+> lee el `README.md` (seccion *EMPEZAR AQUI*). Este archivo es el manual tecnico
+> de consulta: endpoints, validaciones, pruebas y solucion de problemas.
+
 Documentacion tecnica oficial del proyecto **Pingux POS** (Entregable Final - Programacion IV).
 Cubre la instalacion, la arquitectura, cada endpoint, los 8 reportes, la integracion con
 Ollama, las validaciones, las pruebas y la resolucion de problemas.

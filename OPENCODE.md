@@ -1,5 +1,9 @@
 # OPENCODE.md
 
+> **Archivo opcional.** Solo lo necesita un asistente de IA (OpenCode, Claude,
+> Copilot) que vaya a modificar el codigo. Para instalar y usar el proyecto,
+> lee el `README.md`.
+
 Guia de referencia para asistentes de IA (OpenCode, Claude, Copilot) que trabajen en este
 repositorio. Describe el stack, los comandos, las convenciones y las reglas que no se deben
 romper.

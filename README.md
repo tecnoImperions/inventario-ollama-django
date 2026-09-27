@@ -1,84 +1,95 @@
-# Pingux POS — Sistema Web de Productos con IA Local (Ollama)
+# Pingux POS — Sistema de Inventario con IA Local (Ollama)
 
-Entregable Final — Programación 4.
-Sistema web Django con **CRUD completo** de productos, ajuste rápido de stock,
-reportes predefinidos y un **asistente de inteligencia artificial local (Ollama)**.
-
----
-
-## 1. Servidor (host)
-
-La aplicación queda publicada en:
-
-```
-http://172.25.4.222:8000
-```
-
-> El host `172.25.4.222` ya está incluido en `ALLOWED_HOSTS`.
+Entregable Final — Programación IV.
+Django + Ollama: CRUD de productos, ajuste de stock, reportes predefinidos y un
+asistente de IA **local** que responde solo con los datos del inventario.
 
 ---
 
-## 2. Requisitos
+# EMPEZAR AQUÍ (2 comandos)
 
-- Python 3.10 o superior.
-- [Ollama](https://ollama.com) instalado y en ejecución.
-
-### Crear el modelo del asistente (pos-inventario-bot)
-
-El modelo base `qwen2.5:1.5b` ya está descargado. Solo registra el asistente
-desde `Modelfile.txt` (el SYSTEM estricto del POS se incrusta ahí):
+Si nunca has instalado este proyecto, en la carpeta del repo ejecuta:
 
 ```bash
-ollama create pos-inventario-bot -f Modelfile.txt
+bash instalar.sh
 ```
 
----
-
-## 3. Instalación
+Ese único comando crea el entorno virtual, instala las dependencias, configura
+el `.env`, aplica las migraciones, registra el modelo de IA y ejecuta las pruebas.
+Cuando termine, arranca el sistema con:
 
 ```bash
-# 1) Clonar el repositorio y entrar
-git clone <url-del-repo> inventario_ia
-cd inventario_ia
+source venv/bin/activate
+python manage.py runserver
+```
 
-# 2) Crear y activar el entorno virtual
-python -m venv venv
-source venv/bin/activate        # Linux / macOS
-# venv\Scripts\activate         # Windows
+Abre **http://127.0.0.1:8000** y listo.
 
-# 3) Configurar variables de entorno (opcional, hay valores por defecto)
-cp .env.example .env            # y editar si hace falta
+<details>
+<summary>Instalación manual (si prefieres hacerlo paso a paso, o en Windows)</summary>
 
-# 4) Instalar dependencias
+```bash
+python3 -m venv venv
+source venv/bin/activate          # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-
-# 5) Aplicar migraciones (base de datos + tablas nuevas)
-python manage.py makemigrations inventario
+cp .env.example .env              # Windows: copy .env.example .env
 python manage.py migrate
-
-# 6) Opcional: cargar datos de ejemplo
-python manage.py shell -c "from inventario.models import Producto; \
-Producto.objects.count() or print('Crea productos desde el panel con Nuevo Producto')"
+ollama pull qwen2.5:1.5b
+ollama create pos-inventario-bot -f Modelfile.txt
+python manage.py runserver
 ```
 
-La configuración de Ollama se lee desde el entorno / `.env`
-(`OLLAMA_API_URL`, `OLLAMA_MODELO`, `OLLAMA_TIMEOUT`) con valores por defecto
-seguros en `config/settings.py`.
+</details>
+
+**Requisitos:** Python 3.11+ y [Ollama](https://ollama.com) (opcional: sin Ollama la
+app funciona igual, pero el chat responde con datos locales en vez del modelo).
 
 ---
 
-## 4. Ejecución (publicado para el host)
+## ¿Qué hay en este repositorio?
+
+| Archivo | Para qué sirve | ¿Lo necesito? |
+|---|---|---|
+| `instalar.sh` | Instala todo con un solo comando | **Sí, empieza aquí** |
+| `README.md` | Este archivo: instalación y vista general | Lectura recomendada |
+| `DOCUMENTACION.md` | Manual técnico: endpoints, validaciones, pruebas, errores frecuentes | Si necesitas el detalle |
+| `informe.md` / `informe.pdf` | Informe académico del entregable | Entrega del coursework |
+| `Modelfile.txt` | Define el asistente `pos-inventario-bot` | Solo si quieres cambiar la IA |
+| `OPENCODE.md` | Convenciones para asistentes de IA que trabajen en el repo | Opcional |
+| `exportar_pdf.py` | Convierte `informe.md` en `informe.pdf` | Solo para regenerar el PDF |
+
+El código vive en dos carpetas: `config/` (configuración de Django) e
+`inventario/` (modelos, vistas, IA, reportes, plantillas y pruebas).
+
+---
+
+## 1. Qué hace el sistema
+
+**Pantalla principal** (sin scroll, todo a la vista):
+
+- **Izquierda — el sistema:** métricas, catálogo de productos, búsqueda, ajuste rápido
+  de stock `+1 / -1`, edición y borrado.
+- **Derecha — el chatbot:** consultas en lenguaje natural con 4 accesos rápidos
+  (`Stock crítico`, `Producto más caro`, `Valor total`, `Reporte: agotados`).
+- **Barra superior:** modales de **Reportes** (8 tipos), **Categorías** (alta y baja)
+  e **Historial** de consultas.
+
+**El chatbot no inventa datos:** el backend arma el inventario real en JSON y el modelo
+solo puede responder con eso. Si Ollama está apagado o el modelo no existe, el sistema
+responde con los datos de SQLite y te dice qué comando ejecutar.
+
+---
+
+## 2. Verificar que todo funciona
 
 ```bash
-# Servir en todas las interfaces de red, puerto 8000
-python manage.py runserver 0.0.0.0:8000
+python manage.py check      # debe decir: System check identified no issues
+python manage.py test       # debe decir: Ran 53 tests ... OK
 ```
-
-Abrir desde cualquier equipo de la red: **http://172.25.4.222:8000**
 
 ---
 
-## 5. Endpoints (nomenclatura snake_case)
+## 3. Endpoints (nomenclatura snake_case)
 
 | Método | Ruta | Función |
 |---|---|---|
@@ -101,7 +112,7 @@ Reportes disponibles (`tipo`): `todos`, `mas_caro`, `mas_barato`,
 
 ---
 
-## 6. Arquitectura
+## 4. Arquitectura
 
 - **`DOCUMENTACION.md`** — manual técnico completo (endpoints, validaciones, pruebas, problemas frecuentes).
 - **`OPENCODE.md`** — convenciones y prohibiciones para asistentes de IA que trabajen en el repo.
@@ -157,7 +168,7 @@ en uso se rechaza indicando cuántos productos la usan.
 
 ---
 
-## 7. Funcionalidades del panel
+## 5. Funcionalidades del panel
 
 - Búsqueda en vivo por código, nombre o categoría.
 - Botones rápidos **+1 / −1** de stock por producto.
@@ -167,7 +178,7 @@ en uso se rechaza indicando cuántos productos la usan.
 
 ---
 
-## 8. Entregables y exportación del informe
+## 6. Entregables y exportación del informe
 
 | Archivo | Descripción |
 |---|---|
