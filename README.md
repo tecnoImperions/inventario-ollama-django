@@ -82,12 +82,16 @@ Abrir desde cualquier equipo de la red: **http://172.25.4.222:8000**
 
 | Método | Ruta | Función |
 |---|---|---|
-| GET | `/` | Panel principal (dashboard, tabla, reportes, chat) |
+| GET | `/` | Panel principal (métricas, tabla, chatbot)
+| GET | `/?mostrar=inactivos` | Panel incluyendo productos desactivados |
 | POST | `/api/chat/` | Chat con IA (parámetro `pregunta`) |
 | GET | `/api/reporte/?tipo=...` | Reportes predefinidos |
 | POST | `/api/producto/guardar/` | Crear / actualizar producto (id presente = edición) |
-| POST | `/api/producto/<pk>/eliminar/` | Eliminar producto |
+| POST | `/api/producto/<pk>/eliminar/` | Borrado: `modo=logico` (defecto) o `fisico` |
 | POST | `/api/producto/<pk>/ajustar_stock/` | Ajuste de stock (parámetro `operacion=sumar|restar`) |
+| GET | `/api/categorias/` | Listar el catálogo con conteo de productos |
+| POST | `/api/categoria/guardar/` | Crear (`nombre`) o renombrar (`id` + `nombre`) una categoría |
+| POST | `/api/categoria/<pk>/eliminar/` | Eliminar categoría (solo si ningún producto la usa) |
 | GET | `/api/historial/` | Historial de consultas a la IA |
 | GET | `/admin/` | Administración de Django |
 
@@ -99,9 +103,12 @@ Reportes disponibles (`tipo`): `todos`, `mas_caro`, `mas_barato`,
 
 ## 6. Arquitectura
 
-- **`inventario/models.py`** — entidades `Producto` y `ConsultaIA` (tablas `productos` y `consultas_ia`).
-- **`inventario/forms.py`** — formulario `ProductoForm` con validaciones de servidor:
-  código único (case-insensitive) y números NO negativos.
+- **`DOCUMENTACION.md`** — manual técnico completo (endpoints, validaciones, pruebas, problemas frecuentes).
+- **`OPENCODE.md`** — convenciones y prohibiciones para asistentes de IA que trabajen en el repo.
+- **`inventario/models.py`** — entidades `Producto`, `Categoria` y `ConsultaIA`
+  (tablas `productos`, `categorias` y `consultas_ia`).
+- **`inventario/forms.py`** — `ProductoForm` y `CategoriaForm` con validaciones de
+  servidor: código único (case-insensitive) y números NO negativos.
 - **`inventario/reportes.py`** — los 8 reportes predefinidos con explicación de Ollama.
 - **`inventario/ia.py`** — construcción de contexto **JSON** + chat con `pos-inventario-bot`;
   si Ollama está caído responde con datos locales y registra todo en `ConsultaIA`.
@@ -109,10 +116,34 @@ Reportes disponibles (`tipo`): `todos`, `mas_caro`, `mas_barato`,
   `build_context()` que arma el contexto desde los modelos reales.
 - **`Modelfile.txt`** — definición del modelo `pos-inventario-bot` (sistema estricto POS +
   temperatura baja para evitar alucinaciones).
-- **`inventario/views.py`** — vistas CRUD, stock, chat, reportes e historial.
-- **`inventario/tests.py`** — pruebas unitarias (23 casos) de modelos, formularios,
-  CRUD, reportes, cliente Ollama y chat.
+- **`inventario/views.py`** — vistas CRUD, stock, categorías, chat, reportes e historial.
+- **`inventario/tests.py`** — pruebas unitarias (53 casos) de modelos, formularios,
+  CRUD, categorías, reportes, cliente Ollama y chat.
 - **`inventario/templates/inventario/index.html`** — interfaz POS con Markdown (`marked.js`).
+
+### Pantalla: sistema a la izquierda, chatbot a la derecha
+
+El panel sigue la separación pedida en los requerimientos, y además está pensado para
+que el usuario **no tenga que hacer scroll** en la pantalla principal:
+
+- **Columna izquierda (sistema)**: métricas y catálogo de productos. La tabla tiene su
+  propio scroll interno y el panel se estira hasta el alto de la ventana
+  (`flex: 1` + `min-height: 0`), de modo que el contenido siempre entra en una pantalla.
+- **Columna derecha (chatbot)**: únicamente conversación con la IA y sus accesos rápidos,
+  también con scroll propio.
+- **Barra superior**: botones `Reportes`, `Categorías` e `Historial`, que abren **modales**
+  (el de reportes es ancho, `1040px`, para que quepan las tablas completas). Así el
+  usuario trabaja sobre modales grandes en lugar de alargar la página.
+- El formulario de producto usa un **combo** (`datalist`) con el catálogo: se puede
+  elegir una categoría existente o escribir una nueva, que se registra sola al guardar.
+
+### Categorías: por qué `Producto.categoria` sigue siendo texto
+
+`Categoria` es un catálogo independiente para poder elegir, agregar y borrar categorías
+sin reescribir los reportes ni los filtros ya validados. Al guardar un producto, la
+categoría escrita se registra en el catálogo (`get_or_create`) y la migración `0004`
+pobló el catálogo con las categorías que ya usaban los productos. Borrar una categoría
+en uso se rechaza indicando cuántos productos la usan.
 
 ### Patrones de diseño aplicados
 

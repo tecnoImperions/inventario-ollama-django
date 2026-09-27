@@ -34,6 +34,29 @@ class Producto(models.Model):
 
 
 
+class Categoria(models.Model):
+    """Catalogo de categorias del inventario (CRUD independiente).
+
+    Producto.categoria sigue siendo texto para no romper los filtros ni los
+    reportes ya validados; este catalogo permite elegir de una lista, anadir
+    y eliminar categorias, y se sincroniza al guardar un producto.
+    """
+    nombre = models.CharField(max_length=100, unique=True, verbose_name="Categoría")
+    fecha_creacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de creación")
+
+    class Meta:
+        db_table = "categorias"
+        ordering = ["nombre"]
+        verbose_name_plural = "Categorías"
+
+    def __str__(self):
+        return self.nombre
+
+    @property
+    def total_productos(self):
+        return Producto.objects.filter(categoria__iexact=self.nombre).count()
+
+
 class ConsultaIA(models.Model):
     pregunta = models.TextField(verbose_name="Pregunta del usuario")
     respuesta = models.TextField(verbose_name="Respuesta de Ollama")

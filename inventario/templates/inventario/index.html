@@ -60,9 +60,13 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        /* La cadena de alturas queda definida (100%) para que el scroll ocurra
+           DENTRO de la tabla y del chat, y no en la pagina entera. */
+        html { height: 100%; }
         body {
-            background-color: var(--bg-body); color: var(--text-main); min-height: 100vh;
-            display: flex; flex-direction: column; transition: background-color .25s, color .25s;
+            background-color: var(--bg-body); color: var(--text-main); height: 100%;
+            display: flex; flex-direction: column; overflow: hidden;
+            transition: background-color .25s, color .25s;
         }
 
         header {
@@ -87,7 +91,7 @@
         }
         .theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
-        main { flex: 1; padding: 22px; max-width: 1440px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 20px; }
+        main { flex: 1; padding: 22px; max-width: 1440px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 20px; min-height: 0; overflow: hidden; }
 
         .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
         .metric-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; display: flex; align-items: center; gap: 14px; }
@@ -100,7 +104,7 @@
         .metric-info p { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .metric-info h3 { font-size: 20px; font-weight: 700; font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
 
-        .workspace-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 20px; align-items: start; }
+        .workspace-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 20px; align-items: stretch; align-content: stretch; flex: 1; min-height: 0; }
         .panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
         .panel-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--bg-subtle); }
         .panel-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
@@ -127,7 +131,15 @@
         .search-box input:focus, .form-field input:focus, .form-field select:focus, .form-field textarea:focus,
         .chat-input-bar input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.18); }
 
-        .table-wrap { height: 480px; overflow-y: auto; }
+        /* ---------- Sistema (columna izquierda) ---------- */
+        .system-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; min-height: 0; }
+
+        /* La pantalla principal se ajusta al alto de la ventana: el usuario
+           nunca tiene que hacer scroll para ver la tabla ni el chat, porque
+           la tabla y la conversacion tienen su propio scroll interno. */
+        .system-col > .panel { flex: 1; min-height: 0; }
+        .table-wrap { flex: 1; min-height: 140px; overflow-y: auto; }
+        .chat-container { display: flex; flex-direction: column; flex: 1; min-height: 0; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         thead th {
             position: sticky; top: 0; background: var(--sticky-bg); color: var(--text-muted); font-size: 11px;
@@ -154,13 +166,14 @@
         .tag-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(207, 34, 46, 0.4); }
         .tag-warning { background: var(--warning-bg); color: var(--warning); border: 1px solid rgba(154, 103, 0, 0.4); }
         .tag-ok { background: var(--success-bg); color: var(--success); border: 1px solid rgba(26, 127, 55, 0.4); }
+        .tag-off { background: var(--bg-subtle); color: var(--text-muted); border: 1px solid var(--border); }
 
-        .chat-container { display: flex; flex-direction: column; height: 562px; }
+        .chat-container { display: flex; flex-direction: column; }
         .quick-chips { padding: 12px 16px; display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--border); background: var(--bg-subtle); }
         .chip { background: var(--btn-bg); border: 1px solid var(--border); color: var(--text-muted); font-size: 11px; padding: 5px 10px; border-radius: 14px; cursor: pointer; transition: all 0.2s; }
         .chip:hover { border-color: var(--accent); color: var(--accent); }
 
-        .chat-logs { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        .chat-logs { flex: 1; min-height: 90px; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
         .msg-bubble { padding: 10px 14px; border-radius: 8px; font-size: 13px; line-height: 1.55; max-width: 90%; word-break: break-word; }
         .msg-bubble.user { align-self: flex-end; background: var(--accent); color: var(--accent-contrast); }
         .msg-bubble.bot { align-self: flex-start; background: var(--bubble-bot); border: 1px solid var(--border); color: var(--text-main); }
@@ -184,6 +197,7 @@
         }
         .modal-overlay.active { display: flex; }
         .modal { background: var(--bg-card); border: 1px solid var(--border-strong); border-radius: 12px; width: 100%; max-width: 540px; padding: 24px; box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35); }
+        .modal.wide { max-width: 1040px; }
         .modal h3 { font-size: 16px; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
         .form-field { display: flex; flex-direction: column; gap: 6px; }
@@ -209,10 +223,65 @@
         .toast.show { opacity: 1; transform: translateY(0); }
         .toast.error { border-left-color: var(--danger); }
 
+        /* ---------- Sistema (columna izquierda) ---------- */
+        .system-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+
+        .report-output {
+            padding: 16px 18px; font-size: 13px; line-height: 1.55; max-height: 420px; overflow-y: auto;
+        }
+        .report-output:empty { display: none; }
+        .report-output table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12px; }
+        .report-output th, .report-output td { border: 1px solid var(--border); padding: 6px 9px; text-align: left; }
+        .report-output th { background: var(--bg-subtle); color: var(--text-muted); }
+        .report-output h3, .report-output h4 { font-size: 14px; margin: 12px 0 6px; color: var(--accent); }
+        .report-output .loading-line { color: var(--text-muted); font-style: italic; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+        .cat-manager { display: flex; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--border); background: var(--bg-subtle); }
+        .cat-manager input {
+            flex: 1; background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px;
+            padding: 9px 12px; color: var(--text-main); font-size: 13px; outline: none;
+        }
+        .cat-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 18px; max-height: 190px; overflow-y: auto; }
+        .cat-item {
+            display: inline-flex; align-items: center; gap: 7px; background: var(--bg-subtle);
+            border: 1px solid var(--border); border-radius: 16px; padding: 5px 6px 5px 12px; font-size: 12px;
+        }
+        .cat-item .cat-count { color: var(--text-muted); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+        .cat-del {
+            width: 20px; height: 20px; border-radius: 50%; border: none; background: transparent;
+            color: var(--text-muted); cursor: pointer; font-size: 12px; display: inline-flex;
+            align-items: center; justify-content: center;
+        }
+        .cat-del:hover { background: var(--danger-bg); color: var(--danger); }
+        .cat-empty { color: var(--text-muted); font-size: 12px; font-style: italic; }
+
+        /* ---------- Historial ---------- */
+        .history-item { border-bottom: 1px solid var(--border); padding: 10px 0; }
+        .history-item:last-child { border-bottom: none; }
+        .history-item .h-pregunta { font-size: 12.5px; color: var(--text-main); margin-bottom: 5px; }
+        .history-item .h-fecha { font-size: 10.5px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+        .history-item details summary { cursor: pointer; font-size: 11.5px; color: var(--accent); }
+        .history-item .h-respuesta { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+        .history-body { max-height: 60vh; overflow-y: auto; }
+
+        /* Movil: las columnas se apilan y vuelve el scroll de la pagina. */
         @media (max-width: 1024px) {
-            .workspace-grid { grid-template-columns: 1fr; }
-            .chat-container { height: 420px; }
-            .table-wrap { height: 380px; }
+            html, body { height: auto; }
+            body { overflow: auto; }
+            main { overflow: visible; }
+            .workspace-grid { grid-template-columns: 1fr; flex: none; }
+            .system-col > .panel { flex: none; }
+            .chat-container { flex: none; height: 420px; }
+            .table-wrap { flex: none; height: 380px; }
+        }
+
+        /* Pantallas muy bajas: se permite scroll de pagina para no recortar. */
+        @media (max-height: 620px) {
+            html, body { height: auto; }
+            body { overflow: auto; }
+            main { overflow: visible; }
+            .table-wrap { flex: none; height: 300px; }
+            .chat-container { flex: none; height: 360px; }
         }
     </style>
 </head>
@@ -225,6 +294,9 @@
         </div>
         <div class="header-right">
             <div class="system-pill"><span class="status-dot"></span>OLLAMA ENGINE : ACTIVE</div>
+            <button class="btn" onclick="openReportModal()"><i class="bi bi-file-earmark-bar-graph"></i> Reportes</button>
+            <button class="btn" onclick="openCategoryModal()"><i class="bi bi-tags"></i> Categorías</button>
+            <button class="btn" onclick="openHistory()"><i class="bi bi-clock-history"></i> Historial</button>
             <button class="theme-toggle" id="themeToggle" title="Cambiar tema" onclick="toggleTheme()">
                 <i class="bi bi-moon-stars"></i>
             </button>
@@ -257,27 +329,22 @@
 
         <section class="workspace-grid">
 
+            <!-- ============ SISTEMA: inventario, reportes y categorias ============ -->
+            <div class="system-col">
+
             <div class="panel">
                 <div class="panel-header">
                     <span class="panel-title"><i class="bi bi-table"></i> Catálogo de Productos</span>
-                    <button class="btn btn-primary" onclick="openModal()"><i class="bi bi-plus-lg"></i> Nuevo Producto</button>
-                </div>
-
-                <div class="toolbar">
-                    <span class="toolbar-label">Reportes:</span>
-                    <button class="btn" onclick="runReport('todos', this)"><i class="bi bi-list-ul"></i> Todos</button>
-                    <button class="btn" onclick="runReport('mas_caro', this)"><i class="bi bi-arrow-up"></i> Más caro</button>
-                    <button class="btn" onclick="runReport('mas_barato', this)"><i class="bi bi-arrow-down"></i> Más barato</button>
-                    <button class="btn" onclick="runReport('pocas_existencias', this)"><i class="bi bi-exclamation-triangle"></i> Pocas existencias</button>
-                    <button class="btn" onclick="runReport('agotados', this)"><i class="bi bi-ban"></i> Agotados</button>
-                    <select class="btn" id="catSelect" onchange="runReport('por_categoria', this)">
-                        <option value="">Por categoría...</option>
-                        {% for cat in categorias %}
-                        <option value="{{ cat }}">{{ cat }}</option>
-                        {% endfor %}
-                    </select>
-                    <button class="btn" onclick="runReport('valor_total', this)"><i class="bi bi-cash-stack"></i> Valor total</button>
-                    <button class="btn" onclick="runReport('mayor_cantidad', this)"><i class="bi bi-graph-up"></i> Mayor cantidad</button>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        {% if mostrar_inactivos %}
+                        <a class="btn" href="{% url 'panel' %}"><i class="bi bi-eye-slash"></i> Solo activos</a>
+                        {% else %}
+                        <a class="btn" href="{% url 'panel' %}?mostrar=inactivos" title="Ver productos desactivados">
+                            <i class="bi bi-eye"></i> Ver inactivos{% if total_inactivos %} ({{ total_inactivos }}){% endif %}
+                        </a>
+                        {% endif %}
+                        <button class="btn btn-primary" onclick="openModal()"><i class="bi bi-plus-lg"></i> Nuevo Producto</button>
+                    </div>
                 </div>
 
                 <div class="search-bar-wrap">
@@ -316,7 +383,9 @@
                                     </span>
                                 </td>
                                 <td id="status-{{ p.id }}">
-                                    {% if p.cantidad_existente == 0 %}
+                                    {% if not p.estado %}
+                                        <span class="tag-status tag-off"><i class="bi bi-archive"></i> Inactivo</span>
+                                    {% elif p.cantidad_existente == 0 %}
                                         <span class="tag-status tag-danger"><i class="bi bi-ban"></i> Agotado</span>
                                     {% elif p.cantidad_existente <= p.stock_minimo %}
                                         <span class="tag-status tag-warning"><i class="bi bi-arrow-down"></i> Bajo (≤{{ p.stock_minimo }})</span>
@@ -337,6 +406,9 @@
                 </div>
             </div>
 
+            </div><!-- /system-col -->
+
+            <!-- ============ CHATBOT (columna derecha) ============ -->
             <div class="panel">
                 <div class="panel-header">
                     <span class="panel-title"><i class="bi bi-terminal-split"></i> Pingux Terminal IA</span>
@@ -348,7 +420,7 @@
                         <span class="chip" onclick="askChip('¿Qué productos están en estado crítico o agotados?')">Stock crítico</span>
                         <span class="chip" onclick="askChip('¿Cuál es el producto más caro?')">Producto más caro</span>
                         <span class="chip" onclick="askChip('¿Cuál es el valor total del inventario?')">Valor total</span>
-                        <span class="chip" onclick="runReport('agotados')">Reporte: agotados</span>
+                        <span class="chip" onclick="askReportChip('agotados', 'agotados')">Reporte: agotados</span>
                     </div>
 
                     <div class="chat-logs" id="chatLogs">
@@ -379,7 +451,12 @@
                     </div>
                     <div class="form-field">
                         <label for="categoria">Categoría *</label>
-                        <input type="text" id="categoria" required autocomplete="off">
+                        <input type="text" id="categoria" list="catOptions" required autocomplete="off" placeholder="Elegí o escribí una nueva">
+                        <datalist id="catOptions">
+                            {% for c in catalogo %}
+                            <option value="{{ c.nombre }}"></option>
+                            {% endfor %}
+                        </datalist>
                     </div>
                     <div class="form-field full">
                         <label for="nombre">Nombre *</label>
@@ -412,6 +489,79 @@
                     <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Guardar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="reportModal">
+        <div class="modal wide">
+            <h3><i class="bi bi-file-earmark-bar-graph"></i> Reportes de inventario</h3>
+
+            <div class="toolbar" style="border:1px solid var(--border);border-radius:8px;margin-bottom:14px;">
+                <span class="toolbar-label">Generar:</span>
+                <button class="btn" onclick="runReport('todos', this)"><i class="bi bi-list-ul"></i> Todos</button>
+                <button class="btn" onclick="runReport('mas_caro', this)"><i class="bi bi-arrow-up"></i> Más caro</button>
+                <button class="btn" onclick="runReport('mas_barato', this)"><i class="bi bi-arrow-down"></i> Más barato</button>
+                <button class="btn" onclick="runReport('pocas_existencias', this)"><i class="bi bi-exclamation-triangle"></i> Pocas existencias</button>
+                <button class="btn" onclick="runReport('agotados', this)"><i class="bi bi-ban"></i> Agotados</button>
+                <select class="btn" id="catSelect" onchange="this.value ? runReport('por_categoria', this) : null">
+                    <option value="">Por categoría...</option>
+                    {% for cat in categorias %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
+                </select>
+                <button class="btn" onclick="runReport('valor_total', this)"><i class="bi bi-cash-stack"></i> Valor total</button>
+                <button class="btn" onclick="runReport('mayor_cantidad', this)"><i class="bi bi-graph-up"></i> Mayor cantidad</button>
+            </div>
+
+            <div class="report-output" id="reportOutput" style="max-height:56vh;">
+                <p style="color:var(--text-muted);font-size:12.5px;margin:0;">
+                    Selecciona un reporte para ver la tabla completa y el análisis de Ollama.
+                </p>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn" onclick="clearReport()"><i class="bi bi-x-lg"></i> Limpiar</button>
+                <button type="button" class="btn btn-primary" onclick="closeReportModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="categoryModal">
+        <div class="modal">
+            <h3><i class="bi bi-tags"></i> Categorías <span id="catCountLabel" style="font-size:12px;color:var(--text-muted);font-weight:400;">({{ catalogo|length }} registradas)</span></h3>
+
+            <div class="cat-manager" style="border:1px solid var(--border);border-radius:8px;margin-bottom:14px;">
+                <input type="text" id="newCategory" placeholder="Nueva categoría (ej. Limpieza, Bebidas...)" onkeypress="if(event.key==='Enter') addCategory()">
+                <button class="btn btn-primary" onclick="addCategory()"><i class="bi bi-plus-lg"></i> Agregar</button>
+            </div>
+
+            <div class="cat-list" id="catList" style="border:1px solid var(--border);border-radius:8px;max-height:46vh;">
+                {% for c in catalogo %}
+                <span class="cat-item">
+                    {{ c.nombre }}
+                    <span class="cat-count">{{ c.total_productos }}</span>
+                    <button class="cat-del" title="Eliminar categoría" onclick="deleteCategory({{ c.id }}, '{{ c.nombre|escapejs }}')"><i class="bi bi-x"></i></button>
+                </span>
+                {% empty %}
+                <span class="cat-empty">Aún no hay categorías registradas.</span>
+                {% endfor %}
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-primary" onclick="closeCategoryModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal">
+            <h3><i class="bi bi-clock-history"></i> Historial de consultas</h3>
+            <div class="history-body" id="historyBody">
+                <p class="cat-empty">Cargando...</p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn" onclick="closeHistory()">Cerrar</button>
+            </div>
         </div>
     </div>
 
@@ -493,28 +643,167 @@
             sendAIQuery();
         }
 
-        // ---------- Reportes ----------
+        // 4to boton de consulta rapida de la rubrica (RF-06): pide el reporte
+        // por AJAX al endpoint y lo pinta como respuesta en el chat.
+        async function askReportChip(tipo, etiqueta) {
+            const chat = document.getElementById('chatLogs');
+            chat.innerHTML += `<div class="msg-bubble user">Reporte: ${etiqueta || tipo}</div>`;
+            const tempId = 'pingux-rep-' + Date.now();
+            chat.innerHTML += `<div class="msg-bubble bot thinking" id="${tempId}"><i class="bi bi-arrow-repeat"></i> Generando reporte...</div>`;
+            chat.scrollTop = chat.scrollHeight;
+            try {
+                const res = await fetch(`/api/reporte/?tipo=${encodeURIComponent(tipo)}`);
+                const data = await res.json();
+                const el = document.getElementById(tempId);
+                el.classList.remove('thinking');
+                el.innerHTML = data.ok ? marked.parse(data.reporte) : marked.parse(data.error || 'Error.');
+            } catch (e) {
+                document.getElementById(tempId).innerHTML = 'Error de conexión con el servidor.';
+            } finally {
+                chat.scrollTop = chat.scrollHeight;
+            }
+        }
+
+        // ---------- Reportes (panel del sistema, fuera del chat) ----------
         async function runReport(tipo, btn) {
             let categoria = '';
             if (tipo === 'por_categoria') {
                 categoria = document.getElementById('catSelect').value;
                 if (!categoria) { showToast('Selecciona una categoría primero.', true); return; }
             }
+            const salida = document.getElementById('reportOutput');
             const original = btn ? btn.innerHTML : '';
             if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i>'; }
+            // Feedback inmediato: el analisis de Ollama puede tardar ~20s.
+            salida.innerHTML = '<p class="loading-line"><i class="bi bi-arrow-repeat"></i> Generando reporte... (Ollama puede tardar unos segundos)</p>';
             try {
                 const res = await fetch(`/api/reporte/?tipo=${encodeURIComponent(tipo)}&categoria=${encodeURIComponent(categoria)}`);
                 const data = await res.json();
                 if (data.ok) {
-                    addBotHtml(marked.parse(data.reporte));
+                    const hora = new Date().toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
+                    salida.innerHTML = `<p style="font-size:11px;color:var(--text-muted);margin:0 0 8px;font-family:'JetBrains Mono',monospace;">Generado ${hora}</p>` + marked.parse(data.reporte);
+                    showToast('Reporte generado.');
                 } else {
+                    salida.innerHTML = `<p class="loading-line">${data.error || 'No se pudo generar el reporte.'}</p>`;
                     showToast(data.error || 'Error generando reporte.', true);
                 }
             } catch (e) {
+                salida.innerHTML = '<p class="loading-line">Error de conexión con el servidor.</p>';
                 showToast('Error generando reporte.', true);
             } finally {
                 if (btn) { btn.disabled = false; btn.innerHTML = original; }
             }
+        }
+
+        function clearReport() {
+            document.getElementById('reportOutput').innerHTML =
+                '<p style="color:var(--text-muted);font-size:12.5px;margin:0;">Selecciona un reporte para ver la tabla completa y el análisis de Ollama.</p>';
+        }
+
+        // ---------- Modales de reportes y categorias ----------
+        function openReportModal() {
+            document.getElementById('reportModal').classList.add('active');
+        }
+        function closeReportModal() {
+            document.getElementById('reportModal').classList.remove('active');
+        }
+        function openCategoryModal() {
+            document.getElementById('categoryModal').classList.add('active');
+        }
+        function closeCategoryModal() {
+            document.getElementById('categoryModal').classList.remove('active');
+        }
+        ['reportModal', 'categoryModal'].forEach(id => {
+            document.getElementById(id).addEventListener('click', e => {
+                if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
+            });
+        });
+
+        // ---------- Categorias ----------
+        async function refreshCategories() {
+            try {
+                const res = await fetch('/api/categorias/');
+                const data = await res.json();
+                if (!data.ok) return;
+
+                document.getElementById('catList').innerHTML = data.categorias.length
+                    ? data.categorias.map(c => `<span class="cat-item">${c.nombre}<span class="cat-count">${c.total_productos}</span><button class="cat-del" title="Eliminar categoría" onclick="deleteCategory(${c.id}, '${c.nombre.replace(/'/g, "\\'")}')"><i class="bi bi-x"></i></button></span>`).join('')
+                    : '<span class="cat-empty">Aún no hay categorías registradas.</span>';
+
+                const opciones = document.getElementById('catOptions');
+                if (opciones) opciones.innerHTML = data.categorias.map(c => `<option value="${c.nombre}"></option>`).join('');
+
+                const sel = document.getElementById('catSelect');
+                const actual = sel.value;
+                sel.innerHTML = '<option value="">Por categoría...</option>' + data.categorias.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
+                sel.value = actual;
+
+                const label = document.getElementById('catCountLabel');
+                if (label) label.textContent = `(${data.categorias.length} registradas)`;
+            } catch (e) { /* el panel se actualiza al recargar */ }
+        }
+
+        async function addCategory() {
+            const input = document.getElementById('newCategory');
+            const nombre = input.value.trim();
+            if (!nombre) { showToast('Escribe el nombre de la categoría.', true); return; }
+            const fd = new FormData();
+            fd.append('nombre', nombre);
+            try {
+                const res = await fetch('/api/categoria/guardar/', { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.ok) {
+                    input.value = '';
+                    showToast(`Categoría '${data.nombre}' agregada.`);
+                    refreshCategories();
+                } else {
+                    showToast(data.error || 'No se pudo agregar.', true);
+                }
+            } catch (e) { showToast('Error de conexión.', true); }
+        }
+
+        async function deleteCategory(id, nombre) {
+            if (!confirm(`¿Eliminar la categoría "${nombre}"?\nSolo se permite si ningún producto la usa.`)) return;
+            try {
+                const res = await fetch(`/api/categoria/${id}/eliminar/`, { method: 'POST' });
+                const data = await res.json();
+                if (data.ok) { showToast('Categoría eliminada.'); refreshCategories(); }
+                else showToast(data.error || 'No se pudo eliminar.', true);
+            } catch (e) { showToast('Error de conexión.', true); }
+        }
+
+        // ---------- Historial (modal propio, fuera del chat) ----------
+        async function openHistory() {
+            const modal = document.getElementById('historyModal');
+            const body = document.getElementById('historyBody');
+            modal.classList.add('active');
+            body.innerHTML = '<p class="cat-empty">Cargando...</p>';
+            try {
+                const res = await fetch('/api/historial/');
+                const data = await res.json();
+                body.innerHTML = data.consultas.length
+                    ? data.consultas.map(c => `<div class="history-item">
+                            <div class="h-pregunta"><i class="bi bi-question-circle"></i> ${escapeHtml(c.pregunta)}</div>
+                            <div class="h-fecha">${c.fecha}</div>
+                            <details><summary>Ver respuesta</summary><div class="h-respuesta">${marked.parse(c.respuesta)}</div></details>
+                        </div>`).join('')
+                    : '<p class="cat-empty">Todavía no hay consultas registradas.</p>';
+            } catch (e) {
+                body.innerHTML = '<p class="cat-empty">No se pudo cargar el historial.</p>';
+            }
+        }
+
+        function closeHistory() {
+            document.getElementById('historyModal').classList.remove('active');
+        }
+        document.getElementById('historyModal').addEventListener('click', e => {
+            if (e.target === e.currentTarget) closeHistory();
+        });
+
+        function escapeHtml(txt) {
+            const div = document.createElement('div');
+            div.textContent = txt == null ? '' : txt;
+            return div.innerHTML;
         }
 
         // ---------- Ajuste de stock ----------
@@ -542,15 +831,35 @@
             }
         }
 
-        // ---------- Eliminar ----------
+        // ---------- Eliminar (logico por defecto, fisico opcional) ----------
         async function deleteProduct(id, nombre) {
-            if (!confirm(`¿Eliminar el producto "${nombre}"?`)) return;
+            const opcion = confirm(
+                `¿Eliminar el producto "${nombre}"?\n\n` +
+                `ACEPTAR = Borrado lógico (se desactiva y no aparece en el inventario)\n` +
+                `CANCELAR = Cancelar\n\n` +
+                `Escribí ELIMINAR FÍSICO y ACEPTAR para borrar el registro de la base de datos.`
+            );
+            if (!opcion) return;
+
+            const texto = prompt(
+                `Última confirmación para "${nombre}":\n` +
+                `Escribí ELIMINAR FÍSICO para borrar el registro definitivamente,\n` +
+                `o BORRAR LÓGICO para solo desactivarlo.`,
+                'BORRAR LÓGICO'
+            );
+            if (texto === null) return;
+
+            const modo = texto.trim().toUpperCase() === 'ELIMINAR FÍSICO' ? 'fisico' : 'logico';
+            const fd = new FormData();
+            fd.append('modo', modo);
+
             try {
-                const res = await fetch(`/api/producto/${id}/eliminar/`, { method: 'POST' });
+                const res = await fetch(`/api/producto/${id}/eliminar/`, { method: 'POST', body: fd });
                 const data = await res.json();
                 if (data.ok) {
                     document.getElementById('row-' + id).remove();
-                    showToast('Producto eliminado.');
+                    showToast(modo === 'fisico' ? 'Producto eliminado definitivamente.' : 'Producto desactivado.');
+                    setTimeout(() => location.reload(), 500);
                 } else {
                     showToast(data.error || 'No se pudo eliminar.', true);
                 }
@@ -567,7 +876,9 @@
             document.getElementById('codigo').value = codigo || '';
             document.getElementById('nombre').value = nombre || '';
             document.getElementById('descripcion').value = descripcion || '';
-            document.getElementById('categoria').value = categoria || 'General';
+            const opciones = document.getElementById('catOptions');
+            const sugerida = opciones && opciones.options.length ? opciones.options[0].value : 'General';
+            document.getElementById('categoria').value = categoria || sugerida;
             document.getElementById('precio').value = precio ?? '';
             document.getElementById('cantidad_existente').value = cantidad ?? 0;
             document.getElementById('stock_minimo').value = stockMinimo ?? 5;
@@ -583,7 +894,7 @@
             if (e.target === e.currentTarget) closeModal();
         });
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') closeModal();
+            if (e.key === 'Escape') { closeModal(); closeHistory(); closeReportModal(); closeCategoryModal(); }
         });
 
         async function saveProduct(event) {

@@ -3,6 +3,20 @@ from django import forms
 from .models import Producto
 
 
+class CategoriaForm(forms.Form):
+    """Valida el nombre de una categoria del catalogo (alta y edicion)."""
+
+    nombre = forms.CharField(max_length=100)
+
+    def clean_nombre(self):
+        nombre = self.cleaned_data.get("nombre", "").strip()
+        if not nombre:
+            raise forms.ValidationError("El nombre de la categoría es obligatorio.")
+        if len(nombre) > 100:
+            raise forms.ValidationError("Máximo 100 caracteres.")
+        return nombre
+
+
 class ProductoForm(forms.ModelForm):
     """Formulario oficial de Producto (RF-01 a RF-05).
 

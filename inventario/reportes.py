@@ -25,19 +25,38 @@ def _tabla_markdown(productos):
     return "\n".join(lineas)
 
 
+def _resumen_para_ia(titulo, contenido):
+    """Resume el reporte para el LLM sin volcarle la tabla Markdown completa.
+
+    Si le mandamos la tabla completa, el modelo la copia en vez de explicarla
+    (y se corta a media palabra por el limite de tokens), asi que le pasamos
+    solo la cantidad de filas.
+    """
+    filas = [l for l in (contenido or "").splitlines()
+             if l.strip().startswith("|") and "---" not in l]
+    cantidad = max(len(filas) - 1, 0)
+    if cantidad:
+        return f"El reporte '{titulo}' es una tabla con {cantidad} filas de productos del almacen."
+    return (contenido or titulo).strip()[:400]
+
+
 def _explicacion_ollama(titulo, contenido):
     try:
         # Contexto compacto (muestra acotada) para acelerar la generación local.
-        contenido_compacto = contenido if len(contenido) <= 400 else contenido[:400] + "… (muestra acotada)"
+        resumen = _resumen_para_ia(titulo, contenido)
         explicacion = consultar_ollama(
-            f"Explica brevemente este reporte de inventario: {titulo}.",
-            contexto_json={"tipo_reporte": titulo, "datos_del_reporte": contenido_compacto},
-            options={"temperature": 0.1, "top_k": 10, "top_p": 0.9, "num_predict": 45, "num_ctx": 512},
+            f"Escribe 1 o 2 frases en español que expliquen este reporte de inventario. "
+            f"No uses tablas, listas ni cabeceras. {resumen}",
+            contexto_json={"tipo_reporte": titulo, "datos_del_reporte": resumen},
+            options={"temperature": 0.1, "top_k": 10, "top_p": 0.9, "num_predict": 60, "num_ctx": 512},
         )
     except Exception as e:  # noqa: BLE001
         logger.warning("Ollama no disponible para el reporte '%s': %s", titulo, e)
         explicacion = None
-    if not explicacion:
+    # Descartamos tablas o respuestas cortadas: el modelo no aporta valor ahi.
+    if not explicacion or "|" in explicacion or not explicacion.strip().endswith((".", "!", "?")):
+        if explicacion:
+            logger.info("Explicacion del modelo descartada para el reporte '%s'.", titulo)
         return "Reporte generado con los datos actuales del almacén (motor de IA no disponible)."
     return explicacion
 
@@ -95,9 +114,10 @@ def reporte_por_categoria(categoria=None):
 
 
 def reporte_valor_total():
-    total_unidades = Producto.objects.aggregate(total=Sum('cantidad_existente'))['total'] or 0
-    total_dinero = sum(p.cantidad_existente * p.precio for p in Producto.objects.filter(estado=True))
-    total_productos = Producto.objects.filter(estado=True).count()
+    activos = Producto.objects.filter(estado=True)
+    total_unidades = activos.aggregate(total=Sum('cantidad_existente'))['total'] or 0
+    total_dinero = sum(p.cantidad_existente * p.precio for p in activos)
+    total_productos = activos.count()
     titulo = "Valor total del inventario"
     cuerpo = (f"- Productos activos: **{total_productos}**\n"
               f"- Unidades en stock: **{total_unidades}**\n"

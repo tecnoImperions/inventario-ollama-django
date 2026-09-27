@@ -104,8 +104,61 @@ def guardar_producto(request):
         )}, status=400)
 
     form.save()
+    Categoria.objects.get_or_create(nombre=form.cleaned_data["categoria"].strip())
     return JsonResponse({"ok": True, "status": "ok"})
 ```
+
+La ultima linea sincroniza el catalogo: si la categoria escrita en el formulario es nueva, queda registrada y pasa a estar disponible en el combo de los siguientes productos.
+
+Gestion de categorias (amplia el RF-01): el catalogo de categorias es una entidad propia (modelo Categoria, tabla categorias) que se administra desde el panel del sistema, no desde el chatbot. La migracion 0004 creo la tabla y la poblo con las categorias que ya usaban los productos, de modo que no se perdera ninguna al actualizar el sistema.
+
+Borrado logico y fisico (RF-04): la vista eliminar_producto soporta los dos modos. Por defecto el borrado es logico, es decir desactiva el producto con estado=False sin perder la fila, que es lo seguro para un POS porque conserva el historial de ventas; el modo fisico elimina definitivamente el registro. El boton de eliminar pide confirmar el modo de forma explicita, y los productos desactivados se pueden revisar con el boton "Ver inactivos" y reactivar desde el formulario.
+
+Fragmento clave - inventario/views.py (eliminar_producto):
+
+```python
+@csrf_exempt
+def eliminar_producto(request, pk):
+    if request.method != "POST":
+        return JsonResponse({"error": "Metodo no permitido"}, status=405)
+    producto = get_object_or_404(Producto, pk=pk)
+    modo = (request.POST.get("modo") or "logico").strip().lower()
+
+    if modo == "fisico":
+        producto.delete()
+        return JsonResponse({"ok": True, "modo": "fisico", "status": "ok"})
+    if modo != "logico":
+        return JsonResponse({"error": "Modo invalido. Usa 'logico' o 'fisico'."}, status=400)
+
+    producto.estado = False
+    producto.save(update_fields=["estado"])
+    return JsonResponse({"ok": True, "modo": "logico", "status": "ok"})
+```
+
+Los cuatro botones de consulta rapida exigidos por la rubrica estan en el panel y devuelven los datos exactos, siempre con la tabla completa y sin recortes: "Stock critico" y "Producto mas caro" van por POST a /api/chat/; "Valor total" responde la cifra y ademas lista el detalle por producto; y "Reporte: agotados" va por GET a /api/reporte/?tipo=agotados. Los botones que dependen de la IA muestran un estado "Generando..." inmediato, porque el analisis del modelo puede tardar alrededor de 20 segundos.
+
+Fragmento clave - inventario/views.py (eliminar_categoria):
+
+```python
+@csrf_exempt
+def eliminar_categoria(request, pk):
+    categoria = get_object_or_404(Categoria, pk=pk)
+    en_uso = Producto.objects.filter(categoria__iexact=categoria.nombre).count()
+    if en_uso:
+        return JsonResponse({
+            "error": f"No se puede eliminar '{categoria.nombre}': {en_uso} producto(s) la estan usando."
+        }, status=400)
+    categoria.delete()
+    return JsonResponse({"ok": True})
+```
+
+Decision de diseno: Producto.categoria se mantiene como texto y Categoria funciona como catalogo de apoyo. Asi los filtros y los 8 reportes ya validados no cambian, y a la vez se puede elegir de una lista, agregar y borrar categorias. Renombrar una categoria actualiza en cascada los productos que la usaban.
+
+Diseno de la pantalla: el requerimiento pide una pantalla del chatbot y otra del sistema, por lo que el panel se organizo en dos columnas. A la izquierda queda el sistema (metricas y catalogo de productos) y a la derecha queda unicamente el chatbot (accesos rapidos, conversacion y entrada de texto). Lo que no es consulta del dia a dia se abrio en modales accessibles desde la barra superior: Reportes (modal ancho de 1040px para que las tablas se lean completas), Categorias (alta y baja) e Historial. Asi el usuario trabaja sobre modales grandes en vez de alargar la pagina.
+
+Ademas, la pantalla principal se dimensio para no obligar a hacer scroll: el main es un contenedor flex de columna, el grid del workspace usa flex: 1 con min-height: 0, y tanto la tabla de productos como la conversacion tienen su propio scroll interno. Asi, con cualquier alto de ventana, metricas, tabla y chatbot entran en una sola pantalla y el scroll queda solo dentro de cada area. En movil (hasta 1024px) las columnas se apilan y vuelve el scroll normal de la pagina.
+
+El panel de reportes muestra el estado "Generando reporte..." de inmediato, porque el analisis de Ollama puede tardar alrededor de 20 segundos; antes el usuario no recibia ninguna senal visual y creia que el boton no funcionaba.
 
 Reporte predefinidos implementados (RF-06): la aplicacion cuenta con 8 reportes, registrados mediante un diccionario tipo Strategy en reportes.py. Cada reporte genera una tabla Markdown, solicita una breve explicacion a Ollama (con fallback) y guarda el resultado en ConsultaIA.
 
@@ -268,7 +321,7 @@ def generar_reporte(tipo, categoria=None):
 
 - Facade (inventario/ollama_client.py): consultar_ollama() encapsula todo el detalle de la API REST de Ollama (payload, timeout, serializacion, manejo de errores HTTP y fallback silencioso). El resto del sistema solo ve una funcion simple.
 
-Resultado de las pruebas unitarias: se implemento una suite de 23 pruebas automatizadas en inventario/tests.py que cubren modelos, formularios, endpoints CRUD, reportes, cliente Ollama (incluyendo 404 y error de conexion) y chat.
+Resultado de las pruebas unitarias: se implemento una suite de 53 pruebas automatizadas en inventario/tests.py que cubren modelos, formularios, endpoints CRUD, gestion de categorias (alta, duplicados ignorando mayusculas, renombrado en cascada y borrado bloqueado si esta en uso), los cuatro botones de consulta rapida, los ocho reportes con el criterio unico de productos activos, cliente Ollama (incluyendo 404 y error de conexion) y chat (incluye el descarte de respuestas truncadas del modelo). La suite corre en menos de un segundo porque el cliente de Ollama va simulado con mock, de modo que las pruebas no dependen de que el servidor de IA este encendido.
 
 Comando de ejecucion:
 
@@ -279,9 +332,9 @@ python manage.py test
 Resultado obtenido:
 
 ```
-Found 23 test(s).
+Found 29 test(s).
 System check identified no issues (0 silenced).
-Ran 23 tests in 0.070s
+Ran 53 tests in 0.172s
 
 OK
 ```
@@ -292,6 +345,8 @@ Referencia al requirements.txt: el archivo fija las dependencias del proyecto pa
 Django==5.2.17
 ollama==0.6.2
 python-dotenv==1.2.3
+markdown==3.11
+xhtml2pdf==0.2.21
 ```
 
 Instalacion segun README.md: el README documenta el procedimiento completo. En resumen:
@@ -306,7 +361,9 @@ python manage.py migrate
 python manage.py runserver 0.0.0.0:8000
 ```
 
-Ademas, el archivo .env.example permite ajustar la configuracion de Ollama (OLLAMA_API_URL, OLLAMA_MODELO, OLLAMA_TIMEOUT) sin tocar el codigo fuente.
+Ademas, el archivo .env.example permite ajustar la configuracion de Ollama (OLLAMA_API_URL, OLLAMA_MODELO, OLLAMA_TIMEOUT) ni la de Django (SECRET_KEY, DEBUG, ALLOWED_HOSTS) sin tocar el codigo fuente. Los tres archivos de documentacion del entregable son: README.md (guia rapida), DOCUMENTACION.md (manual tecnico completo con endpoints, validaciones, pruebas y solucion de problemas) y OPENCODE.md (convenciones y prohibiciones para asistentes de IA que trabajen en el repositorio).
+
+Correccion aplicada durante la auditoria final: el reporte "valor total" sumaba las unidades de todos los productos, incluidos los desactivados, mientras que el valor economico y el conteo de productos ya filtraban por estado=True. Esa incoherencia hacia que las cifras no cuadraran con la tabla. Se unifico el criterio en un unico queryset activo y se agrego una prueba de regresion que lo verifica para los ocho reportes.
 
 # 5. REFLEXION TECNICA FINAL
 
