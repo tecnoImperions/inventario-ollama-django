@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pingux POS - Sistema Web de Productos con IA Local</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            color-scheme: light;
+            --bg-body: #f6f8fa;
+            --bg-card: #ffffff;
+            --bg-input: #ffffff;
+            --bg-subtle: #eaeef2;
+            --border: #d0d7de;
+            --border-strong: #afb8c1;
+            --text-main: #1f2328;
+            --text-muted: #59636e;
+            --accent: #0969da;
+            --accent-hover: #0550ae;
+            --accent-contrast: #ffffff;
+            --success: #1a7f37;
+            --danger: #cf222e;
+            --warning: #9a6700;
+            --danger-bg: rgba(207, 34, 46, 0.12);
+            --warning-bg: rgba(154, 103, 0, 0.14);
+            --success-bg: rgba(26, 127, 55, 0.12);
+            --row-hover: rgba(9, 105, 218, 0.07);
+            --btn-bg: #f6f8fa;
+            --btn-text: #1f2328;
+            --bubble-bot: #f6f8fa;
+            --sticky-bg: #eaeef2;
+        }
+
+        html[data-theme="dark"] {
+            color-scheme: dark;
+            --bg-body: #0d1117;
+            --bg-card: #161b22;
+            --bg-input: #0d1117;
+            --bg-subtle: #11151b;
+            --border: #30363d;
+            --border-strong: #484f58;
+            --text-main: #e6edf3;
+            --text-muted: #8b949e;
+            --accent: #58a6ff;
+            --accent-hover: #1f6feb;
+            --accent-contrast: #0d1117;
+            --success: #238636;
+            --danger: #f85149;
+            --warning: #d29922;
+            --danger-bg: rgba(218, 54, 51, 0.15);
+            --warning-bg: rgba(210, 153, 34, 0.15);
+            --success-bg: rgba(35, 134, 54, 0.15);
+            --row-hover: rgba(88, 166, 255, 0.08);
+            --btn-bg: #21262d;
+            --btn-text: #e6edf3;
+            --bubble-bot: #21262d;
+            --sticky-bg: #161b22;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body {
+            background-color: var(--bg-body); color: var(--text-main); min-height: 100vh;
+            display: flex; flex-direction: column; transition: background-color .25s, color .25s;
+        }
+
+        header {
+            background: var(--bg-card); border-bottom: 1px solid var(--border);
+            padding: 12px 24px; display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 500;
+        }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; letter-spacing: -0.3px; }
+        .brand i { font-size: 20px; color: var(--accent); }
+        .brand img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); }
+        .header-right { display: flex; align-items: center; gap: 10px; }
+        .system-pill {
+            background: var(--btn-bg); padding: 5px 12px; border-radius: 20px; font-size: 11px;
+            font-family: 'JetBrains Mono', monospace; color: var(--text-muted); border: 1px solid var(--border);
+            display: flex; align-items: center; gap: 6px;
+        }
+        .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #3fb950; box-shadow: 0 0 8px #3fb950; }
+        .theme-toggle {
+            background: var(--btn-bg); border: 1px solid var(--border); color: var(--text-muted);
+            width: 34px; height: 34px; border-radius: 8px; cursor: pointer; font-size: 16px;
+            display: inline-flex; align-items: center; justify-content: center; transition: all .15s;
+        }
+        .theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+        main { flex: 1; padding: 22px; max-width: 1440px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 20px; }
+
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+        .metric-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; display: flex; align-items: center; gap: 14px; }
+        .metric-icon { width: 42px; height: 42px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .icon-blue { background: rgba(9, 105, 218, 0.14); color: var(--accent); }
+        .icon-green { background: var(--success-bg); color: var(--success); }
+        .icon-red { background: var(--danger-bg); color: var(--danger); }
+        .icon-yellow { background: var(--warning-bg); color: var(--warning); }
+        .metric-info { min-width: 0; }
+        .metric-info p { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .metric-info h3 { font-size: 20px; font-weight: 700; font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+
+        .workspace-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 20px; align-items: start; }
+        .panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
+        .panel-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--bg-subtle); }
+        .panel-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+
+        .toolbar { padding: 12px 18px; border-bottom: 1px solid var(--border); background: var(--bg-subtle); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .toolbar-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: .4px; }
+        .btn {
+            background: var(--btn-bg); border: 1px solid var(--border); color: var(--btn-text);
+            font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 6px; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 6px; transition: all .15s;
+        }
+        .btn:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-primary { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
+        .btn-primary:hover { background: var(--accent-hover); color: var(--accent-contrast); border-color: var(--accent-hover); }
+        select.btn { height: 32px; color: var(--text-main); }
+
+        .search-bar-wrap { padding: 12px 18px; border-bottom: 1px solid var(--border); display: flex; gap: 10px; background: var(--bg-subtle); }
+        .search-box { position: relative; flex: 1; }
+        .search-box i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 13px; }
+        .search-box input {
+            width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px;
+            padding: 9px 12px 9px 34px; color: var(--text-main); font-size: 13px; outline: none;
+        }
+        .search-box input:focus, .form-field input:focus, .form-field select:focus, .form-field textarea:focus,
+        .chat-input-bar input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.18); }
+
+        .table-wrap { height: 480px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th {
+            position: sticky; top: 0; background: var(--sticky-bg); color: var(--text-muted); font-size: 11px;
+            text-transform: uppercase; padding: 11px 16px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 600; z-index: 2;
+        }
+        tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+        tbody tr:hover { background: var(--row-hover); }
+        td { padding: 9px 16px; vertical-align: middle; }
+        .prod-cat { font-size: 11px; color: var(--text-muted); display: block; margin-top: 2px; }
+        .code-tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); background: var(--bg-subtle); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; }
+        .price-tag { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+        .stock-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+        .stock-actions { display: inline-flex; gap: 4px; margin-left: 8px; }
+        .stock-btn { width: 24px; height: 24px; border-radius: 5px; border: 1px solid var(--border); background: var(--btn-bg); color: var(--text-main); font-size: 13px; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+        .stock-btn.plus:hover { border-color: var(--success); color: var(--success); }
+        .stock-btn.minus:hover { border-color: var(--danger); color: var(--danger); }
+
+        .row-actions { display: inline-flex; gap: 4px; }
+        .icon-btn { width: 26px; height: 26px; border-radius: 5px; border: 1px solid var(--border); background: var(--btn-bg); color: var(--text-muted); cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; }
+        .icon-btn.edit:hover { border-color: var(--accent); color: var(--accent); }
+        .icon-btn.del:hover { border-color: var(--danger); color: var(--danger); }
+
+        .tag-status { padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+        .tag-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(207, 34, 46, 0.4); }
+        .tag-warning { background: var(--warning-bg); color: var(--warning); border: 1px solid rgba(154, 103, 0, 0.4); }
+        .tag-ok { background: var(--success-bg); color: var(--success); border: 1px solid rgba(26, 127, 55, 0.4); }
+
+        .chat-container { display: flex; flex-direction: column; height: 562px; }
+        .quick-chips { padding: 12px 16px; display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--border); background: var(--bg-subtle); }
+        .chip { background: var(--btn-bg); border: 1px solid var(--border); color: var(--text-muted); font-size: 11px; padding: 5px 10px; border-radius: 14px; cursor: pointer; transition: all 0.2s; }
+        .chip:hover { border-color: var(--accent); color: var(--accent); }
+
+        .chat-logs { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        .msg-bubble { padding: 10px 14px; border-radius: 8px; font-size: 13px; line-height: 1.55; max-width: 90%; word-break: break-word; }
+        .msg-bubble.user { align-self: flex-end; background: var(--accent); color: var(--accent-contrast); }
+        .msg-bubble.bot { align-self: flex-start; background: var(--bubble-bot); border: 1px solid var(--border); color: var(--text-main); }
+        .msg-bubble.bot.thinking { color: var(--text-muted); font-style: italic; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+        .msg-bubble table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; overflow: hidden; border-radius: 6px; }
+        .msg-bubble th, .msg-bubble td { border: 1px solid var(--border); padding: 6px 9px; text-align: left; }
+        .msg-bubble th { background: var(--bg-subtle); color: var(--text-muted); }
+        .msg-bubble strong { color: var(--danger); }
+        .msg-bubble h3, .msg-bubble h4 { font-size: 13.5px; margin: 4px 0; }
+        .msg-bubble h3 { color: var(--accent); }
+
+        .chat-input-bar { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: var(--bg-subtle); }
+        .chat-input-bar input { flex: 1; background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; color: var(--text-main); font-size: 13px; outline: none; }
+        .btn-send { background: var(--accent); color: var(--accent-contrast); border: none; border-radius: 6px; padding: 0 16px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background 0.15s; }
+        .btn-send:hover { background: var(--accent-hover); }
+        .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(13, 17, 23, 0.62); z-index: 1000;
+            align-items: flex-start; justify-content: center; padding: 48px 16px; overflow-y: auto;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal { background: var(--bg-card); border: 1px solid var(--border-strong); border-radius: 12px; width: 100%; max-width: 540px; padding: 24px; box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35); }
+        .modal h3 { font-size: 16px; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .form-field { display: flex; flex-direction: column; gap: 6px; }
+        .form-field.full { grid-column: 1 / -1; }
+        .form-field label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: .4px; }
+        .form-field input, .form-field select, .form-field textarea {
+            background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px;
+            padding: 9px 12px; color: var(--text-main); font-size: 13px; outline: none;
+        }
+        .form-field textarea { resize: vertical; min-height: 58px; }
+        .form-error { background: var(--danger-bg); border: 1px solid rgba(207, 34, 46, 0.5); color: var(--danger); border-radius: 6px; padding: 9px 12px; font-size: 12px; margin-top: 14px; display: none; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+        .switch-row { display: flex; align-items: center; gap: 9px; margin-top: 22px; min-height: 32px; }
+        .switch-row input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+        .switch-row label { text-transform: none; cursor: pointer; }
+
+        .toast {
+            position: fixed; bottom: 24px; right: 24px; top: auto; left: auto; z-index: 1300;
+            background: var(--bg-card); border: 1px solid var(--border-strong); border-left: 3px solid var(--success);
+            padding: 12px 16px; border-radius: 8px; font-size: 13px; opacity: 0; transform: translateY(10px); transition: all .25s;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25); max-width: 340px;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.error { border-left-color: var(--danger); }
+
+        @media (max-width: 1024px) {
+            .workspace-grid { grid-template-columns: 1fr; }
+            .chat-container { height: 420px; }
+            .table-wrap { height: 380px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <img src="https://res.cloudinary.com/duwvw6q2c/image/upload/v1790082368/8cb1bd0c-54e6-455d-ae3b-e9f0fdee1010_t1jcru.jpg" alt="Pingux POS">
+            <span>Pingux <span style="color:var(--accent)">POS</span></span>
+        </div>
+        <div class="header-right">
+            <div class="system-pill"><span class="status-dot"></span>OLLAMA ENGINE : ACTIVE</div>
+            <button class="theme-toggle" id="themeToggle" title="Cambiar tema" onclick="toggleTheme()">
+                <i class="bi bi-moon-stars"></i>
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <section class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon icon-blue"><i class="bi bi-box-seam"></i></div>
+                <div class="metric-info"><p>Productos Activos</p><h3>{{ total_articulos }}</h3></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon icon-blue"><i class="bi bi-stack"></i></div>
+                <div class="metric-info"><p>Unidades en Stock</p><h3>{{ total_stock }}</h3></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon icon-yellow"><i class="bi bi-exclamation-triangle"></i></div>
+                <div class="metric-info"><p>Bajo / Crítico</p><h3>{{ criticos_count }}</h3></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon icon-red"><i class="bi bi-ban"></i></div>
+                <div class="metric-info"><p>Agotados</p><h3>{{ agotados_count }}</h3></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon icon-green"><i class="bi bi-cash-stack"></i></div>
+                <div class="metric-info"><p>Valor Estimado</p><h3>Bs. {{ valor_total }}</h3></div>
+            </div>
+        </section>
+
+        <section class="workspace-grid">
+
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title"><i class="bi bi-table"></i> Catálogo de Productos</span>
+                    <button class="btn btn-primary" onclick="openModal()"><i class="bi bi-plus-lg"></i> Nuevo Producto</button>
+                </div>
+
+                <div class="toolbar">
+                    <span class="toolbar-label">Reportes:</span>
+                    <button class="btn" onclick="runReport('todos', this)"><i class="bi bi-list-ul"></i> Todos</button>
+                    <button class="btn" onclick="runReport('mas_caro', this)"><i class="bi bi-arrow-up"></i> Más caro</button>
+                    <button class="btn" onclick="runReport('mas_barato', this)"><i class="bi bi-arrow-down"></i> Más barato</button>
+                    <button class="btn" onclick="runReport('pocas_existencias', this)"><i class="bi bi-exclamation-triangle"></i> Pocas existencias</button>
+                    <button class="btn" onclick="runReport('agotados', this)"><i class="bi bi-ban"></i> Agotados</button>
+                    <select class="btn" id="catSelect" onchange="runReport('por_categoria', this)">
+                        <option value="">Por categoría...</option>
+                        {% for cat in categorias %}
+                        <option value="{{ cat }}">{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn" onclick="runReport('valor_total', this)"><i class="bi bi-cash-stack"></i> Valor total</button>
+                    <button class="btn" onclick="runReport('mayor_cantidad', this)"><i class="bi bi-graph-up"></i> Mayor cantidad</button>
+                </div>
+
+                <div class="search-bar-wrap">
+                    <div class="search-box">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="filterInput" placeholder="Buscar por código, nombre o categoría..." onkeyup="filterTable()">
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table id="productsTable">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Artículo</th>
+                                <th>Precio</th>
+                                <th>Stock</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in productos %}
+                            <tr id="row-{{ p.id }}">
+                                <td><span class="code-tag">{{ p.codigo }}</span></td>
+                                <td>
+                                    <strong>{{ p.nombre }}</strong>
+                                    <span class="prod-cat">{{ p.categoria }}{% if p.descripcion %} · {{ p.descripcion }}{% endif %}</span>
+                                </td>
+                                <td><span class="price-tag">Bs. {{ p.precio }}</span></td>
+                                <td>
+                                    <span class="stock-num" id="stock-{{ p.id }}">{{ p.cantidad_existente }}</span>
+                                    <span class="stock-actions">
+                                        <button class="stock-btn plus" title="Sumar 1" onclick="adjustStock({{ p.id }}, 'sumar')"><i class="bi bi-plus"></i></button>
+                                        <button class="stock-btn minus" title="Restar 1" onclick="adjustStock({{ p.id }}, 'restar')"><i class="bi bi-dash"></i></button>
+                                    </span>
+                                </td>
+                                <td id="status-{{ p.id }}">
+                                    {% if p.cantidad_existente == 0 %}
+                                        <span class="tag-status tag-danger"><i class="bi bi-ban"></i> Agotado</span>
+                                    {% elif p.cantidad_existente <= p.stock_minimo %}
+                                        <span class="tag-status tag-warning"><i class="bi bi-arrow-down"></i> Bajo (≤{{ p.stock_minimo }})</span>
+                                    {% else %}
+                                        <span class="tag-status tag-ok"><i class="bi bi-check2"></i> Óptimo</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="row-actions">
+                                        <button class="icon-btn edit" title="Editar" onclick="openModal('{{ p.id }}','{{ p.codigo|escapejs }}','{{ p.nombre|escapejs }}','{{ p.descripcion|escapejs }}','{{ p.categoria|escapejs }}','{{ p.precio }}',{{ p.cantidad_existente }},{{ p.stock_minimo }},{{ p.estado|lower }})"><i class="bi bi-pencil"></i></button>
+                                        <button class="icon-btn del" title="Eliminar" onclick="deleteProduct({{ p.id }}, '{{ p.nombre|escapejs }}')"><i class="bi bi-trash"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title"><i class="bi bi-terminal-split"></i> Pingux Terminal IA</span>
+                    <span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-muted);">pos-inventario-bot</span>
+                </div>
+
+                <div class="chat-container">
+                    <div class="quick-chips">
+                        <span class="chip" onclick="askChip('¿Qué productos están en estado crítico o agotados?')">Stock crítico</span>
+                        <span class="chip" onclick="askChip('¿Cuál es el producto más caro?')">Producto más caro</span>
+                        <span class="chip" onclick="askChip('¿Cuál es el valor total del inventario?')">Valor total</span>
+                        <span class="chip" onclick="runReport('agotados')">Reporte: agotados</span>
+                    </div>
+
+                    <div class="chat-logs" id="chatLogs">
+                        <div class="msg-bubble bot">
+                            Pingux POS IA en línea. Consulta existencias, precios o solicita reportes en lenguaje natural.
+                        </div>
+                    </div>
+
+                    <div class="chat-input-bar">
+                        <input type="text" id="aiInput" placeholder="Pregunta al almacén (ej: ¿Cuál es el producto más caro?)..." onkeypress="if(event.key==='Enter') sendAIQuery()">
+                        <button class="btn-send" id="sendBtn" onclick="sendAIQuery()"><i class="bi bi-send-fill"></i></button>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <div class="modal-overlay" id="productModal">
+        <div class="modal">
+            <h3><i class="bi bi-box-seam"></i> <span id="modalTitle">Nuevo Producto</span></h3>
+            <form id="productForm" onsubmit="return saveProduct(event)">
+                <input type="hidden" id="pid">
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label for="codigo">Código único *</label>
+                        <input type="text" id="codigo" required autocomplete="off">
+                    </div>
+                    <div class="form-field">
+                        <label for="categoria">Categoría *</label>
+                        <input type="text" id="categoria" required autocomplete="off">
+                    </div>
+                    <div class="form-field full">
+                        <label for="nombre">Nombre *</label>
+                        <input type="text" id="nombre" required autocomplete="off">
+                    </div>
+                    <div class="form-field full">
+                        <label for="descripcion">Descripción</label>
+                        <textarea id="descripcion"></textarea>
+                    </div>
+                    <div class="form-field">
+                        <label for="precio">Precio (Bs.) *</label>
+                        <input type="number" id="precio" min="0" step="0.01" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="stock_minimo">Stock mínimo *</label>
+                        <input type="number" id="stock_minimo" min="0" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="cantidad_existente">Cantidad existente *</label>
+                        <input type="number" id="cantidad_existente" min="0" required>
+                    </div>
+                    <div class="form-field switch-row">
+                        <input type="checkbox" id="estado" checked>
+                        <label for="estado">Producto activo</label>
+                    </div>
+                </div>
+                <div class="form-error" id="formError"></div>
+                <div class="modal-actions">
+                    <button type="button" class="btn" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        // ---------- Tema claro/oscuro ----------
+        function applyTheme(theme) {
+            document.documentElement.dataset.theme = theme;
+            localStorage.setItem('pingux-theme', theme);
+            document.getElementById('themeToggle').innerHTML =
+                theme === 'dark' ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon-stars"></i>';
+        }
+        function toggleTheme() {
+            applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+        }
+        const themeInicial = localStorage.getItem('pingux-theme') || 'light';
+        applyTheme(themeInicial);
+
+        // ---------- Utilidades ----------
+        function showToast(msg, isError) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.toggle('error', !!isError);
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2600);
+        }
+
+        function filterTable() {
+            const query = document.getElementById('filterInput').value.toLowerCase();
+            document.querySelectorAll('#productsTable tbody tr').forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(query) ? '' : 'none';
+            });
+        }
+
+        // ---------- Chat con IA ----------
+        function addBotHtml(html) {
+            const chat = document.getElementById('chatLogs');
+            chat.innerHTML += `<div class="msg-bubble bot">${html}</div>`;
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        async function sendAIQuery() {
+            const input = document.getElementById('aiInput');
+            const btn = document.getElementById('sendBtn');
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            input.disabled = true;
+            btn.disabled = true;
+
+            const chat = document.getElementById('chatLogs');
+            chat.innerHTML += `<div class="msg-bubble user">${text}</div>`;
+            const tempId = 'pingux-msg-' + Date.now();
+            chat.innerHTML += `<div class="msg-bubble bot thinking" id="${tempId}"><i class="bi bi-arrow-repeat"></i> Procesando consulta...</div>`;
+            chat.scrollTop = chat.scrollHeight;
+
+            try {
+                const fd = new FormData();
+                fd.append('pregunta', text);
+                const res = await fetch('/api/chat/', { method: 'POST', body: fd });
+                const data = await res.json();
+                const el = document.getElementById(tempId);
+                el.classList.remove('thinking');
+                el.innerHTML = data.ok ? marked.parse(data.respuesta) : marked.parse(data.error || 'Error.');
+            } catch (e) {
+                document.getElementById(tempId).innerHTML = 'Error de conexión con el motor de IA.';
+            } finally {
+                input.disabled = false;
+                btn.disabled = false;
+                input.focus();
+                chat.scrollTop = chat.scrollHeight;
+            }
+        }
+
+        function askChip(texto) {
+            document.getElementById('aiInput').value = texto;
+            sendAIQuery();
+        }
+
+        // ---------- Reportes ----------
+        async function runReport(tipo, btn) {
+            let categoria = '';
+            if (tipo === 'por_categoria') {
+                categoria = document.getElementById('catSelect').value;
+                if (!categoria) { showToast('Selecciona una categoría primero.', true); return; }
+            }
+            const original = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i>'; }
+            try {
+                const res = await fetch(`/api/reporte/?tipo=${encodeURIComponent(tipo)}&categoria=${encodeURIComponent(categoria)}`);
+                const data = await res.json();
+                if (data.ok) {
+                    addBotHtml(marked.parse(data.reporte));
+                } else {
+                    showToast(data.error || 'Error generando reporte.', true);
+                }
+            } catch (e) {
+                showToast('Error generando reporte.', true);
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = original; }
+            }
+        }
+
+        // ---------- Ajuste de stock ----------
+        async function adjustStock(id, operacion) {
+            const fd = new FormData();
+            fd.append('operacion', operacion);
+            try {
+                const res = await fetch(`/api/producto/${id}/ajustar_stock/`, { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.ok) {
+                    document.getElementById('stock-' + id).textContent = data.cantidad_existente;
+                    const status = document.getElementById('status-' + id);
+                    if (data.agotado) {
+                        status.innerHTML = '<span class="tag-status tag-danger"><i class="bi bi-ban"></i> Agotado</span>';
+                    } else if (data.critico) {
+                        status.innerHTML = '<span class="tag-status tag-warning"><i class="bi bi-arrow-down"></i> Bajo</span>';
+                    } else {
+                        status.innerHTML = '<span class="tag-status tag-ok"><i class="bi bi-check2"></i> Óptimo</span>';
+                    }
+                } else {
+                    showToast(data.error || 'No se pudo ajustar el stock.', true);
+                }
+            } catch (e) {
+                showToast('Error ajustando stock.', true);
+            }
+        }
+
+        // ---------- Eliminar ----------
+        async function deleteProduct(id, nombre) {
+            if (!confirm(`¿Eliminar el producto "${nombre}"?`)) return;
+            try {
+                const res = await fetch(`/api/producto/${id}/eliminar/`, { method: 'POST' });
+                const data = await res.json();
+                if (data.ok) {
+                    document.getElementById('row-' + id).remove();
+                    showToast('Producto eliminado.');
+                } else {
+                    showToast(data.error || 'No se pudo eliminar.', true);
+                }
+            } catch (e) {
+                showToast('Error eliminando producto.', true);
+            }
+        }
+
+        // ---------- Modal CRUD ----------
+        function openModal(id, codigo, nombre, descripcion, categoria, precio, cantidad, stockMinimo, estado) {
+            document.getElementById('formError').style.display = 'none';
+            document.getElementById('modalTitle').textContent = id ? 'Editar Producto' : 'Nuevo Producto';
+            document.getElementById('pid').value = id || '';
+            document.getElementById('codigo').value = codigo || '';
+            document.getElementById('nombre').value = nombre || '';
+            document.getElementById('descripcion').value = descripcion || '';
+            document.getElementById('categoria').value = categoria || 'General';
+            document.getElementById('precio').value = precio ?? '';
+            document.getElementById('cantidad_existente').value = cantidad ?? 0;
+            document.getElementById('stock_minimo').value = stockMinimo ?? 5;
+            document.getElementById('estado').checked = estado !== false;
+            document.getElementById('productModal').classList.add('active');
+            document.getElementById('codigo').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('productModal').classList.remove('active');
+        }
+        document.getElementById('productModal').addEventListener('click', e => {
+            if (e.target === e.currentTarget) closeModal();
+        });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        async function saveProduct(event) {
+            event.preventDefault();
+            const fd = new FormData();
+            fd.append('id', document.getElementById('pid').value);
+            fd.append('codigo', document.getElementById('codigo').value.trim());
+            fd.append('nombre', document.getElementById('nombre').value.trim());
+            fd.append('descripcion', document.getElementById('descripcion').value.trim());
+            fd.append('categoria', document.getElementById('categoria').value.trim());
+            fd.append('precio', document.getElementById('precio').value);
+            fd.append('cantidad_existente', document.getElementById('cantidad_existente').value);
+            fd.append('stock_minimo', document.getElementById('stock_minimo').value);
+            if (document.getElementById('estado').checked) fd.append('estado', 'on');
+
+            const res = await fetch('/api/producto/guardar/', { method: 'POST', body: fd });
+            const data = await res.json();
+            if (data.ok) {
+                closeModal();
+                showToast('Producto guardado.');
+                setTimeout(() => location.reload(), 400);
+            } else {
+                const errEl = document.getElementById('formError');
+                errEl.textContent = data.error || 'Error al guardar.';
+                errEl.style.display = 'block';
+            }
+            return false;
+        }
+    </script>
+</body>
+</html>

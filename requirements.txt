@@ -1,0 +1,8 @@
+# Aplicacion
+Django==5.2.17
+ollama==0.6.2
+python-dotenv==1.2.3
+
+# Exportacion del informe (informe.md -> informe.pdf) via exportar_pdf.py
+markdown==3.11
+xhtml2pdf==0.2.21
