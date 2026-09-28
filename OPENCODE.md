@@ -1,187 +1,149 @@
-# OPENCODE.md
+# OPENCODE.md — Uso de OpenCode en el proyecto
 
-> **Archivo opcional.** Solo lo necesita un asistente de IA (OpenCode, Claude,
-> Copilot) que vaya a modificar el codigo. Para instalar y usar el proyecto,
-> lee el `README.md`.
+Este archivo es la evidencia de cómo se construyó **Pingux POS** con OpenCode: las
+sesiones de trabajo, los prompts enviados, y qué cambió en el proyecto por cada uno.
 
-Guia de referencia para asistentes de IA (OpenCode, Claude, Copilot) que trabajen en este
-repositorio. Describe el stack, los comandos, las convenciones y las reglas que no se deben
-romper.
+> Las convenciones técnicas están en `DOCUMENTACION.md` y la guía de instalación en
+> `README.md`. Aquí solo va el registro de las sesiones.
 
 ---
 
-## 1. Que es este proyecto
+## 1. Qué es OpenCode y cómo se usó
 
-**Pingux POS**: sistema web de inventario y ventas desarrollado en Django 5.2, con un
-asistente de IA local sobre Ollama. Entregable final de la asignatura Programacion IV.
+OpenCode es un asistente de codificación con IA que se ejecuta **en la terminal**. Se usó
+como compañero de desarrollo: se describía el problema en lenguaje natural, proponía el
+código, y luego se verificaba ejecutando el proyecto.
 
-El backend arma el contexto del inventario en JSON y lo envia a un modelo local; el modelo
-solo responde con los datos suministrados. Si Ollama falla, el sistema responde con datos
-de SQLite.
+**Nada se dio por bueno sin probarlo.** Cada bloque generado se validó con:
 
----
-
-## 2. Stack y prohibiciones
-
-| Elemento | Valor |
+| Verificación | Comando |
 |---|---|
-| Python | 3.11 |
-| Framework | Django 5.2.17 |
-| IA | Ollama + `qwen2.5:1.5b` (modelo `pos-inventario-bot`) |
-| Cliente HTTP | `httpx` (con timeout) |
-| Base de datos | SQLite (`db.sqlite3`) |
-| Entorno | `venv/` en la raiz |
-| Frontend | Plantilla unica, JS vanilla, Bootstrap Icons, `marked.js` via CDN |
-
-**Prohibido**:
-
-- Anyadir dependencias sin actualizar `requirements.txt`.
-- Usar la API de Ollama con el SDK `ollama` (el proyecto usa `httpx` a proposito).
-- Consultar a Ollama desde una vista. Las consultas de datos viven en `ia.py` y
-  `reportes.py`; las vistas solo coordinan HTTP.
-- Enviar al modelo la tabla Markdown completa de un reporte (solo conteos).
-- Dejar que el modelo reemplace una respuesta calculada con datos.
-- Escribir SQL concatenado a mano. Usar el ORM de Django.
-- Editar o borrar `db.sqlite3` desde codigo fuera de las vistas y migraciones.
+| La app no tiene errores | `python manage.py check` |
+| Las 53 pruebas pasan | `python manage.py test` |
+| Las migraciones están al día | `python manage.py makemigrations --check --dry-run` |
+| Los endpoints responden | `curl` contra el servidor |
+| La instalación desde cero funciona | Instalar en una copia limpia y arrancar |
 
 ---
 
-## 3. Comandos
+## 2. Resumen de sesiones
 
-```bash
-# Entorno
-source venv/bin/activate
+| # | Sesión | Prompt enviado | Resultado |
+|---|---|---|---|
+| 1 | Validaciones | "Estructura `clean_codigo` y `clean_precio` sin códigos duplicados ni valores negativos" | `ProductoForm` con unicidad case-insensitive |
+| 2 | Patrón Strategy | "Diccionario de estrategias para 8 reportes sin if-else encadenados" | `REPORTES` + `generar_reporte(tipo)` |
+| 3 | Cliente Ollama | "try-except con httpx que capture el 404 y los timeouts, con fallback a SQLite" | `consultar_ollama()` y excepción `ModeloNoRegistrado` |
+| 4 | Interfaz | "La pantalla principal no debe hacer scroll; tabla y chat con scroll interno" | Layout con `flex: 1` + `min-height: 0`, y modales |
+| 5 | Categorías | "Agrega un catálogo de categorías sin reescribir los reportes ya validados" | Modelo `Categoria`, migración `0004`, 3 endpoints |
+| 6 | Combo de categorías | "Que aparezca un combo para que el usuario no invente nombres nuevos" | `<select>` en vez de campo de texto libre |
+| 7 | Repositorio | "Si alguien entra a la repo no entendería qué hacer; revisa qué está versionado" | De 9.197 a 34 archivos, con `.gitignore` |
+| 8 | Documentación | "El README debe ser una guía paso a paso, no un instalador mágico" | README de 9 pasos, con Ollama obligatorio |
+| 9 | Auditoría | "¿Cumplimos con todo lo que pide la rúbrica?" | `pip freeze`, referencias y `.zip` de entrega |
 
-# Ejecutar
-python manage.py runserver
+---
 
-# Validar y probar
-python manage.py check
-python manage.py test
-python manage.py test inventario.tests.CrudApiTests
+## 3. Las sesiones con código
 
-# Migraciones (SIEMPRE despues de tocar models.py)
-python manage.py makemigrations
-python manage.py migrate
-python manage.py makemigrations --check --dry-run   # debe decir "No changes detected"
+### Sesión 1 — Validación de código único
 
-# Modelo de IA (solo si se modifico Modelfile.txt)
-ollama create pos-inventario-bot -f Modelfile.txt
+El prompt pedía evitar duplicados distinguiendo mayúsculas de minúsculas, sin romper la
+edición. OpenCode propuso separar la exclusividad en su propio `clean_*` y **excluir la
+instancia actual**, que era el detalle que faltaba:
 
-# Regenerar el PDF del informe
-python exportar_pdf.py
+```python
+def clean_codigo(self):
+    codigo = self.cleaned_data["codigo"].strip()
+    qs = Producto.objects.filter(codigo__iexact=codigo)
+    if self.instance.pk:
+        qs = qs.exclude(pk=self.instance.pk)   # <- permite editar sin cambiar el código
+    if qs.exists():
+        raise forms.ValidationError("Ya existe un producto con ese código.")
+    return codigo
 ```
 
-Estado esperado: `53 tests ... OK` y `System check identified no issues`.
+**Impacto:** sin ese `exclude`, guardar una edición sin tocar el código fallaba con
+"código duplicado". Se agregó una prueba que edita un producto y confirma que no se bloquea.
 
----
+### Sesión 2 — Patrón Strategy para los reportes
 
-## 4. Mapa del codigo
+El prompt pedía evitar condicionales encadenados. La solución fue un diccionario que
+resuelve el algoritmo en tiempo de ejecución:
 
-| Archivo | Responsabilidad | No debe contener |
-|---|---|---|
-| `config/settings.py` | Env, seguridad, variables de Ollama | Logica de negocio |
-| `config/urls.py` | Rutas con `name=` para `reverse()` | Vistas inline |
-| `inventario/models.py` | `Producto`, `Categoria`, `ConsultaIA` y validadores | Consultas a otros modelos |
-| `inventario/forms.py` | `ProductoForm`, `CategoriaForm` | Acceso a `request` |
-| `inventario/views.py` | HTTP, validacion de metodo, JSON | Consultas complexas a datos |
-| `inventario/ia.py` | Contexto JSON, intents, fallback | Llamadas directas a Ollama |
-| `inventario/ollama_client.py` | Cliente HTTP, errores | Contexto de negocio |
-| `inventario/reportes.py` | Los 8 reportes (Strategy) | Dependencia de Django |
-| `inventario/tests.py` | 53 pruebas | Datos de produccion |
+```python
+REPORTES = {
+    "mas_caro": reporte_producto_mas_caro,
+    "valor_total": reporte_valor_total,
+    # ... 8 en total
+}
 
-Flujo de una consulta del chat:
-
-```
-navegador -> POST /api/chat/ -> views.chat_ia -> ia.chat_consulta
-   -> construir_contexto()  (SQLite, productos activos)
-   -> intent determinista?  -> respuesta calculada
-   -> si no: consultar_ollama() -> modelo
-   -> error/truncado? -> _respuesta_fallback()
-   -> ConsultaIA.objects.create(...) -> JSON al navegador
+def generar_reporte(tipo, **kwargs):
+    return REPORTES[tipo](**kwargs)
 ```
 
----
+**Impacto:** agregar un reporte nuevo es una función más y una línea. No se toca ningún
+`if`. Es el patrón Strategy del punto 3 del informe.
 
-## 5. Convenciones
+### Sesión 3 — Manejo de errores de Ollama
 
-- **Nombres**: `snake_case` en Python, `nombres_latinos` en espanol para variables de
-  negocio (`cantidad_existente`, `stock_minimo`), `camelCase` en JavaScript.
-- **Rutas**: siempre con `name=` para poder usar `{% url %}` y `reverse()`.
-- **Endpoints**: validan el metodo HTTP (`405`), responden JSON, usan `get_object_or_404`.
-- **JS**: funciones `async` con `try / catch / finally`, siempre con feedback visible
-  (spinner, toast o estado de carga). Nada de `fetch` sin manejo de error.
-- **Plantilla**: el panel no debe hacer scroll. Lo secundario va en modales; la tabla y el
-  chat tienen scroll interno (`flex: 1` + `min-height: 0`).
-- **Modelos**: todo cambio en `models.py` exige `makemigrations` + `migrate`.
-- **Tests**: toda funcion o vista nueva necesita al menos un test.
+El prompt pedía distinguir el 404 del resto de fallos. OpenCode los separó porque requieren
+mensajes distintos al usuario:
 
----
+```python
+except httpx.HTTPStatusError as e:
+    if e.response.status_code == 404:
+        raise ModeloNoRegistrado(MODELO) from e
+    return None
+```
 
-## 6. Reglas de la interfaz
+**Impacto:** se cumplen los requisitos 2.4 y 2.5. Si Ollama está apagado, el chat responde
+con datos de SQLite; si el modelo no existe, muestra el comando `ollama create` exacto. La
+aplicación nunca se cae.
 
-1. La pantalla principal tiene solo dos paneles: catalogo (izquierda) y chatbot (derecha).
-2. Reportes, categorias e historial se abren en modales desde la barra superior.
-3. Los 4 botones de consulta rapida de la rubrica viven en el chat y pintan sus tablas:
-   `Stock critico`, `Producto mas caro`, `Valor total`, `Reporte: agotados`.
-4. El formulario de producto usa un combo (`datalist`) con el catalogo de categorias.
-5. Nada de scroll en la pagina principal en tamano de escritorio.
-6. Toda accion debe dar feedback inmediato (las consultas con Ollama pueden tardar ~20 s).
+### Sesión 6 — Combo de categorías
 
----
+El prompt pidió que el formulario mostrara las categorías existentes para que el usuario no
+inventara nombres. La solución fue cambiar el campo de texto libre por un `<select>` que
+solo lista el catálogo, con un enlace para crear una nueva desde el modal de Categorías.
 
-## 7. Restricciones de la IA
+**Impacto:** las categorías quedan bajo control y la entrada de datos es más consistente.
 
-En `Modelfile.txt` (`SYSTEM`):
+### Sesión 7 — Limpieza del repositorio
 
-- Responder **solo** con el inventario del contexto JSON recibido.
-- No inventar productos, precios ni stock.
-- Rechazar temas ajenos al POS con la frase exacta definida.
-- Responder en espanol, breve, sin relleno.
-- `temperature 0.1` para reducir alucinaciones.
+El repositorio tenía **9.197 archivos** versionados, casi todos `venv/` y `__pycache__`.
+Se creó un `.gitignore` y se desindexó lo que no debía estar.
 
-Si se cambia el prompt, hay que recrear el modelo con
-`ollama create pos-inventario-bot -f Modelfile.txt` o los cambios no tendran efecto.
+**Impacto:** el repositorio pasó a **34 archivos**. Se conservaron a propósito `db.sqlite3`
+(para que el sistema abra con datos de ejemplo) e `informe.pdf` (es un entregable),
+dejándolo anotado en el propio `.gitignore`.
 
----
+### Sesión 9 — Auditoría contra la rúbrica
 
-## 8. Reglas de negocio
+Se recorre el enunciado completo de la actividad y se detectan cuatro incumplimientos:
 
-- Solo los productos con `estado=True` cuentan en metricas, reportes y contexto para la IA.
-- `agotado` es `cantidad_existente == 0`.
-- `pocas_existencias` es `0 < cantidad_existente <= stock_minimo`.
-- El ajuste rapido de stock nunca baja de cero.
-- El borrado por defecto es **logico** (`estado=False`); el fisico es optimo (`modo=fisico`).
-- Una categoria en uso no se puede borrar; se avisa cuantos productos la usan.
-- Al guardar un producto, su categoria se registra en el catalogo automaticamente.
-
----
-
-## 9. Documentos que hay que mantener al dia
-
-| Archivo | Cuando se actualiza |
+| Incumplimiento | Corrección |
 |---|---|
-| `README.md` | Cada endpoint, patron o comando nuevo |
-| `DOCUMENTACION.md` | Cambios de arquitectura, validaciones o pruebas |
-| `informe.md` / `informe.pdf` | Cambios visibles del entregable (debe quedar **sin tildes ni enies**) |
-| `requirements.txt` | Cada dependencia nueva |
-| `.env.example` | Cada variable de entorno nueva |
-| `OPENCODE.md` (este) | Cambios de convenciones o prohibiciones |
-
-`informe.md` **no puede llevar tildes ni enies** (lo exige el docente). El comando
-`python exportar_pdf.py` verifica esa regla y genera el PDF.
+| `requirements.txt` escrito a mano (5 paquetes) | Regenerado con `pip freeze` (48 paquetes) |
+| Sin documentar la descarga del modelo (punto 2.1) | Sección con `ollama pull` y salida de `ollama list` |
+| Sin citas y referencias | Sección 6 del informe con enlaces a Django, Ollama y OpenCode |
+| No existía el `.zip` de entrega | Creado con la estructura `proyecto/`, `informe.md`, `informe.pdf` |
 
 ---
 
-## 10. Errores frecuentes de un asistente
+## 4. Impacto en el desarrollo
 
-| Error tipico | Consecuencia | Como evitarlo |
+| Aspecto | Con OpenCode | Sin OpenCode |
 |---|---|---|
-| Editar `models.py` sin migrar | La app revienta al arrancar | `makemigrations` + `migrate` siempre |
-| Anadir un reporte sin registrarlo en `REPORTES` | `KeyError` en tiempo de ejecucion | Registrar en el diccionario |
-| Filtrar solo por precio sin `estado=True` | El reporte incluye productos desactivados | Filtrar por `estado=True` en los 8 |
-| `Sum()` sin filtro en un reporte | Cifras que no cuadran con la tabla | Usar siempre el mismo queryset |
-| Dejar el `.innerHTML` del reporte en el chat | El reporte se mezcla con la conversacion | Renderizar en `#reportOutput` |
-| Quitar un boton de la rubrica | Se pierde puntaje | Los 4 botones de consulta rapida son obligatorios |
-| Anadir scroll a la pantalla principal | Se pierde eficiencia de uso | Modales y scroll interno |
-| Subir texto del `SYSTEM` desde Python | Se duplica la fuente de verdad | La instruction vive solo en el `Modelfile` |
+| Validaciones | Una sesión, con prueba que lo cubre | Iterar errores de unicidad a mano |
+| 8 reportes | Diccionario extensible | Ocho `if/elif` que crecerían sin control |
+| Cliente Ollama | Excepción propia y fallback a SQLite | Depurar errores HTTP a ciegas |
+| Interfaz | Scroll interno y modales resueltos | Medir alturas y `overflow` a mano |
+| Repositorio | De 9.197 a 34 archivos | Subir `venv/` a GitHub por error |
+| Verificación | 53 pruebas en cada cambio | "Funciona en mi máquina" |
+
+**Lo más útil no fue escribir código, sino verificarlo.** Varios bloques no salieron
+correctos a la primera. El ejemplo más claro: el reporte `valor_total` sumaba unidades de
+productos **desactivados**. El error no se vio leyendo el código, sino al comparar el total
+con la tabla, y se corrigió agregando una prueba que lo detecta.
+
+Ese ciclo —generar, ejecutar, comparar, probar— es lo que mantuvo el proyecto coherente
+durante todo el desarrollo.

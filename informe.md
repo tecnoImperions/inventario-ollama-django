@@ -407,7 +407,7 @@ python manage.py migrate
 python manage.py runserver 0.0.0.0:8000
 ```
 
-Ademas, el archivo .env.example permite ajustar la configuracion de Ollama (OLLAMA_API_URL, OLLAMA_MODELO, OLLAMA_TIMEOUT) ni la de Django (SECRET_KEY, DEBUG, ALLOWED_HOSTS) sin tocar el codigo fuente. Los tres archivos de documentacion del entregable son: README.md (guia rapida), DOCUMENTACION.md (manual tecnico completo con endpoints, validaciones, pruebas y solucion de problemas) y OPENCODE.md (convenciones y prohibiciones para asistentes de IA que trabajen en el repositorio).
+Ademas, el archivo .env.example permite ajustar la configuracion de Ollama (OLLAMA_API_URL, OLLAMA_MODELO, OLLAMA_TIMEOUT) ni la de Django (SECRET_KEY, DEBUG, ALLOWED_HOSTS) sin tocar el codigo fuente. Los tres archivos de documentacion del entregable son: README.md (guia de instalacion paso a paso, con los 9 pasos y la explicacion de cada uno), DOCUMENTACION.md (manual tecnico completo con endpoints, validaciones, pruebas y solucion de problemas) y OPENCODE.md (evidencia del uso de OpenCode: tabla resumen de las 9 sesiones de trabajo, prompts utilizados, respuestas obtenidas con su codigo, impacto en el desarrollo y una tabla final de ventajas frente al metodo manual).
 
 Correccion aplicada durante la auditoria final: el reporte "valor total" sumaba las unidades de todos los productos, incluidos los desactivados, mientras que el valor economico y el conteo de productos ya filtraban por estado=True. Esa incoherencia hacia que las cifras no cuadraran con la tabla. Se unifico el criterio en un unico queryset activo y se agrego una prueba de regresion que lo verifica para los ocho reportes.
 
@@ -428,7 +428,7 @@ El uso de variables de entorno y .env permitio desacoplar la configuracion de Ol
 
 ## USO DE OPENCODE COMO ASISTENTE DE DESARROLLO
 
-Durante el desarrollo de Pingux POS, se utilizo OpenCode directamente desde la terminal MiniOS (Debian 12) como asistente de codificacion.
+Durante el desarrollo de Pingux POS, se utilizo OpenCode desde la terminal como asistente de codificacion, aplicando el siguiente ciclo: se describia el problema en lenguaje natural, se revisaba el codigo generado ejecutando el proyecto, y se contrastaban los resultados con la base de datos y con las pruebas automaticas antes de darlos por validos. El detalle completo de las nueve sesiones, con los prompts enviados y el impacto de cada una, quedo documentado en el archivo OPENCODE.md.
 
 ### Sesiones y Prompts Clave:
 1. **Generacion de validaciones en forms.py:**
@@ -440,6 +440,13 @@ Durante el desarrollo de Pingux POS, se utilizo OpenCode directamente desde la t
 3. **Manejo de excepciones HTTP y Fallback para Ollama:**
    - *Prompt:* "Escribe un bloque try-except usando httpx que capture errores 404 (modelo no registrado) y timeouts, devolviendo un fallback con datos de SQLite."
    - *Impacto:* Garantizo que la aplicacion nunca se caiga si el servidor local de Ollama esta apagado o saturado.
+4. **Interfaz sin scroll en la pantalla principal:**
+   - *Prompt:* "La pantalla principal no debe hacer scroll; la tabla y el chat deben tener scroll interno."
+   - *Impacto:* Se resolvio con flex: 1 y min-height: 0, mas el uso de modales para reportes, categorias e historial.
+5. **Limpieza del repositorio:**
+   - *Prompt:* "Si alguien entra a la repo no entenderia que hacer. Revisa que hay versionado."
+   - *Impacto:* El repositorio paso de 9.197 a 34 archivos, separando el codigo fuente de los entornos virtuales y la cache de Python.
+
 # 6. CITAS Y REFERENCIAS
 
 ## Documentacion oficial consultada
