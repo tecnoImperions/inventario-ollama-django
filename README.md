@@ -15,19 +15,27 @@ sin saltarse nada. No hace falta saber Django: solo seguir los pasos en orden.
 | Necesitas | Versión | ¿Obligatorio? | De dónde se descarga |
 |---|---|---|---|
 | **Python** | **3.11 o superior** | **Sí** | [python.org/downloads](https://www.python.org/downloads/) |
+| **Ollama** (la IA) | cualquiera | **Sí** | [ollama.com/download](https://ollama.com/download) |
 | **Un editor de código** (recomendado: VS Code) | cualquiera | No, pero ayuda mucho | [code.visualstudio.com](https://code.visualstudio.com/) |
 | **Git** | cualquiera | No (hay alternativa sin Git) | [git-scm.com/downloads](https://git-scm.com/downloads) |
-| **Ollama** | cualquiera | No | [ollama.com/download](https://ollama.com/download) |
 | **Internet** | — | Solo la primera vez | Para descargar Python, los paquetes y el modelo de IA |
 
-> ### ¿Y Ollama? ¿Es obligatorio?
+> ### ⚠️ Ollama SÍ es obligatorio
 >
-> **No.** El sistema funciona **completo** sin Ollama. Si no lo instalas, el chat igual
-> responde, pero usando consultas automáticas sobre la base de datos en vez del modelo de
-> lenguaje. Se vería algo como: *"Hay 4 productos con stock crítico"*.
+> Este proyecto **no funciona sin Ollama**. La IA local es una parte obligatoria del
+> entregable, no un extra: el chatbot es el corazón del sistema y sin Ollama no tiene
+> modelo de lenguaje con el que responder.
 >
-> Instálalo **solo si quieres ver la IA "hablando"** con tu inventario. Son 2 comandos
-> extra y se hacen en el [Paso 8](#paso-8--opcional-instalar-la-ia-con-ollama).
+> Por eso el [Paso 7](#paso-7--instalar-la-ia-con-ollama-obligatorio) no se puede saltar.
+> Necesitas **las dos cosas**:
+>
+> | Qué | Por qué |
+> |---|---|
+> | El programa **Ollama** | Es el motor que ejecuta el modelo en tu computadora |
+> | El modelo **`qwen2.5:1.5b`** | Son los ~986 MB del modelo de lenguaje que responde |
+>
+> Tarda unos minutos la **primera vez** (descarga los 986 MB). De ahí en adelante ya
+> está en tu máquina y nunca más lo bajas otra vez.
 
 ### Cómo saber qué versión de Python tienes
 
@@ -42,14 +50,17 @@ Debe decir algo como `Python 3.11.2` o mayor. Si dice `Python 3.9` o `3.10`, ins
 una versión nueva antes de continuar.
 
 > **Windows:** al instalar Python, marca la casilla **"Add Python to PATH"**. Si no lo
-> haces, la terminal no reconhecerá el comando `python`.
+> haces, la terminal no reconocerá el comando `python`.
+
+> **Linux:** si `python3 --version` no existe, instala primero
+> `sudo apt install python3-venv` antes de continuar.
 
 ---
 
 # Guía de instalación (paso a paso)
 
-Hay 9 pasos. **Hazlos todos, en orden.** Al final tendrás el sistema corriendo en tu
-computadora.
+Hay 9 pasos. **Hazlos todos, en orden.** El paso 7 (la IA con Ollama) es
+**obligatorio**. Al final tendrás el sistema corriendo con la IA funcionando.
 
 Resumen rapidísimo, pero **no te saltes la explicación de cada paso**:
 
@@ -60,7 +71,9 @@ python3 -m venv venv                                                       # 3. 
 source venv/bin/activate                                                    # 4. activar
 pip install -r requirements.txt                                             # 5. dependencias
 cp .env.example .env                                                        # 6. configuración
-python manage.py migrate                                                    # 7. base de datos
+ollama pull qwen2.5:1.5b                                                    # 7. IA (OBLIGATORIO)
+ollama create pos-inventario-bot -f Modelfile.txt                           # 7. IA (OBLIGATORIO)
+python manage.py migrate                                                    # 8. base de datos
 python manage.py runserver                                                  # 9. arrancar
 ```
 
@@ -244,7 +257,85 @@ ahí. (Abre `.env` con un editor de texto si necesitas.)
 
 ---
 
-## Paso 7 — Preparar la base de datos
+## Paso 7 — Instalar la IA con Ollama (OBLIGATORIO)
+
+> **Este paso no se puede saltar.** Es la parte de IA del proyecto y sin él el chatbot no
+> tiene modelo de lenguaje con el que responder. Son 3 comandos y solo los haces **una
+> vez** en tu computadora.
+
+### 7.1 Instalar el programa Ollama
+
+Descárgalo de [ollama.com/download](https://ollama.com/download) (Linux, macOS o
+Windows) e instálalo. Después **cierra y vuelve a abrir la terminal** para que reconozca
+el comando.
+
+Verifica que quedó instalado:
+
+```bash
+ollama --version
+```
+
+Debe mostrarte un número de versión, por ejemplo `ollama version is 0.6.2`.
+
+### 7.2 Descargar el modelo de lenguaje (los 986 MB)
+
+```bash
+ollama pull qwen2.5:1.5b
+```
+
+Este comando **descarga el modelo de lenguaje** que responderá las preguntas. Son
+**986 MB** y puede tardar **5-10 minutos** la primera vez (depende de tu internet).
+
+Es un modelo **pequeño y rápido**, elegido a propósito porque funciona bien **sin GPU
+dedicada**: corre en un portátil normal.
+
+> ¿Se cortó la descarga? No pasa nada: vuelve a ejecutar el mismo `ollama pull` y
+> continúa desde donde se quedó.
+
+### 7.3 Crear nuestro asistente con las reglas del POS
+
+```bash
+ollama create pos-inventario-bot -f Modelfile.txt
+```
+
+¿Qué hace esto? Toma el modelo que acabas de descargar (`qwen2.5:1.5b`) y le **pega las
+instrucciones** de `Modelfile.txt`:
+
+- que **nunca invente datos**,
+- que solo responda con el inventario real que le pasa el backend,
+- que sea concreto y no se invente campos.
+
+El resultado es un modelo propio llamado **`pos-inventario-bot`**. Este es el que usa
+el sistema.
+
+### 7.4 Comprobar que quedó bien
+
+```bash
+ollama list
+```
+
+Debes ver **las dos líneas** (el nombre exacto de la primera termina en `:latest`, es
+normal):
+
+```
+NAME                         ID              SIZE      MODIFIED
+qwen2.5:1.5b                 65ec06548149    986 MB    10 days ago
+pos-inventario-bot:latest    f6ba89e20845    986 MB    4 days ago
+```
+
+- La primera es el **modelo base** que descargaste: `qwen2.5:1.5b`, **986 MB**.
+- La segunda es **nuestro asistente**, ya creado con las reglas del POS a partir del
+  anterior. Por eso ocupa lo mismo: es el mismo modelo con instrucciones encima.
+
+> Si solo aparece `qwen2.5:1.5b` y no `pos-inventario-bot`, se te pasó el paso 7.3.
+> Vuelve a ejecutarlo.
+
+> **¿Ollama no está corriendo?** Si el chat te avisa que no puede conectarse, es que
+> Ollama no está iniciado. En Linux/macOS ejecuta `ollama serve` en otra terminal y
+> déjalo ahí abierto. En Windows normalmente corre solo como servicio.
+---
+
+## Paso 8 — Preparar la base de datos
 
 ```bash
 python manage.py migrate
@@ -273,55 +364,6 @@ Running migrations:
 >
 > Esto es a propósito: al abrir el sistema por primera vez ya vas a ver datos reales en
 > la tabla y puedes probar sin tener que crear 50 productos a mano.
-
----
-
-## Paso 8 — (Opcional) Instalar la IA con Ollama
-
-Si **te saltaste este paso**, tu sistema funciona igual. Vuelve aquí si quieres la IA.
-
-### 8.1 Instalar Ollama
-
-Descárgalo de [ollama.com/download](https://ollama.com/download) (Linux, macOS o
-Windows) e instálalo. Después **reinicia la terminal** para que reconozca el comando.
-
-Verifica que quedó instalado:
-
-```bash
-ollama --version
-```
-
-### 8.2 Descargar el modelo de lenguaje
-
-```bash
-ollama pull qwen2.5:1.5b
-```
-
-Es un modelo **pequeño y rápido** (~1 GB) pensado para trabajar sin GPU dedicada.
-La primera descarga tarda varios minutos. Las siguientes son instantáneas.
-
-### 8.3 Crear nuestro asistente con las reglas del POS
-
-```bash
-ollama create pos-inventario-bot -f Modelfile.txt
-```
-
-¿Qué hace esto? Toma el modelo que acabas de descargar y le pega las instrucciones de
-`Modelfile.txt`: que nunca invente datos, que solo responda con el inventario real, que
-sea concreto. El resultado es un modelo propio llamado `pos-inventario-bot`.
-
-### 8.4 Comprobar
-
-```bash
-ollama list
-```
-
-Debes ver dos líneas: `qwen2.5:1.5b` y `pos-inventario-bot`.
-
-> **Ollama no está corriendo?** Si el chat te avisa que no puede conectarse, es que
-> Ollama no está iniciado. En Linux/macOS ejecuta `ollama serve` en otra terminal y
-> déjalo ahí abierto. En Windows normalmente corre solo como servicio.
-
 ---
 
 ## Paso 9 — Arrancar el sistema
@@ -352,7 +394,7 @@ En la terminal donde lo estás corriendo, presiona **`Ctrl` + `C`**.
 ## ¿Windows? Todo en un solo bloque
 
 Si prefieres pegar todo de una vez en el Command Prompt (después de tener clonado el
-proyecto), esto es lo mismo que los pasos 2 a 9:
+proyecto y **con Ollama instalado**), esto es lo mismo que los pasos 2 a 9:
 
 ```cmd
 cd inventario-ollama-django
@@ -360,6 +402,8 @@ python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
 copy .env.example .env
+ollama pull qwen2.5:1.5b
+ollama create pos-inventario-bot -f Modelfile.txt
 python manage.py migrate
 python manage.py runserver
 ```
@@ -385,7 +429,14 @@ python manage.py test
 
 Debe terminar con: `Ran 53 tests` y luego `OK`.
 
-Si ambas salen bien, tu instalación está correcta y el proyecto está listo para entregar.
+Y por último, que la IA esté viva:
+
+```bash
+ollama list
+```
+
+Debe mostrar `qwen2.5:1.5b` **y** `pos-inventario-bot`. Si aparecen las dos, tu
+instalación está correcta y el proyecto está listo para entregar.
 
 ---
 
@@ -397,9 +448,12 @@ Si ambas salen bien, tu instalación está correcta y el proyecto está listo pa
 | `No module named django` | El entorno virtual **no está activado** | Repite el [Paso 4](#paso-4--activar-el-entorno-virtual) |
 | `externally-managed-environment` | `pip` intentó instalar fuera del entorno | Activa el entorno virtual y repite el [Paso 5](#paso-5--instalar-las-dependencias) |
 | `No such file or directory: 'manage.py'` | **No estás dentro de la carpeta** del proyecto | Repite el [Paso 2](#paso-2--entrar-a-la-carpeta-del-proyecto) |
+| `ollama: command not found` | **Ollama no está instalado** (es obligatorio) | Instálalo en [ollama.com/download](https://ollama.com/download), cierra y reabre la terminal |
+| `Error: model 'pos-inventario-bot' not found` | No creaste el asistente con el `Modelfile` | Repite el paso 7.3: `ollama create pos-inventario-bot -f Modelfile.txt` |
+| `model 'qwen2.5:1.5b' not found` | No descargaste el modelo base | Ejecuta `ollama pull qwen2.5:1.5b` (son 986 MB) |
 | `address already in use` (puerto 8000 ocupado) | Otro programa usa ese puerto | `python manage.py runserver 8001` y abre el puerto 8001 |
 | `TemplateSyntaxError` o errores raros de vista | Cambiaste mal un archivo | `git status` para ver qué tocaste, y revisa la sintaxis |
-| El chat dice que no encuentra `pos-inventario-bot` | Faltó el [Paso 8](#paso-8--opcional-instalar-la-ia-con-ollama) | Ejecuta el `ollama create` del paso 8.3 |
+| El chat dice que no encuentra `pos-inventario-bot` | Faltó el paso 7 | Ve al [Paso 7](#paso-7--instalar-la-ia-con-ollama-obligatorio) |
 | El chat responde lento | El modelo corre en CPU | Es normal la primera vez. Puedes subir `OLLAMA_TIMEOUT` en `.env` |
 | El chat responde sin IA ("motor de IA no disponible") | Ollama apagado | Deja `ollama serve` corriendo en otra terminal |
 
@@ -439,13 +493,17 @@ bash instalar.sh
 1. Crea el entorno virtual (Paso 3)
 2. Instala las dependencias (Paso 5)
 3. Copia el `.env` (Paso 6)
-4. Aplica las migraciones (Paso 7)
-5. Descarga y registra el modelo de Ollama si falta (Paso 8)
+4. Descarga `qwen2.5:1.5b` y crea `pos-inventario-bot` si faltan (Paso 7)
+5. Aplica las migraciones (Paso 8)
 6. Corre las pruebas para confirmar que todo sirve
 
 Es exactamente lo mismo que los pasos manuales, solo que encadenado. **Si algo falla,
 el script te dice en qué paso fue** — y en ese caso vuelve a la guía manual, porque
 sabrás exactamente dónde se rompió.
+
+> Aunque uses el script, **lee igual el Paso 7**. Ollama es obligatorio y es el paso que
+> más confunde a quien empieza. Saber qué hace `ollama pull` y `ollama create` es
+> justamente lo que te va a servir cuando algo falle en una sustentación.
 
 ---
 
@@ -461,7 +519,7 @@ sabrás exactamente dónde se rompió.
 | `manage.py` | La herramienta de Django que usas en todos los comandos | Sí |
 | `requirements.txt` | La lista de librerías (Paso 5) | Sí |
 | `.env.example` | Plantilla de configuración (Paso 6) | Sí, se copia a `.env` |
-| `Modelfile.txt` | Las reglas de nuestro asistente de IA (Paso 8.3) | Solo si usas Ollama |
+| `Modelfile.txt` | Las reglas de nuestro asistente de IA (Paso 7.3) | **Sí**, es obligatorio |
 | `instalar.sh` | Atajo opcional que hace los pasos 3-7 | Opcional |
 | `informe.md` / `informe.pdf` | El informe académico del proyecto | Entrega del coursework |
 | `exportar_pdf.py` | Convierte `informe.md` en `informe.pdf` | Solo para regenerar el PDF |

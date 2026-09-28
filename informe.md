@@ -190,6 +190,52 @@ El cliente HTTP usa la libreria httpx con un timeout amplio (120 s) debido a que
 ollama create pos-inventario-bot -f Modelfile.txt
 ```
 
+## 2.1 Instalacion de Ollama y descarga del modelo
+
+Ollama se instalo desde su instalador oficial para Linux (Debian 12). La secuencia completa de comandos ejecutados fue:
+
+```bash
+# 1) Verificar la instalacion de Ollama
+ollama --version
+# ollama version is 0.6.2
+
+# 2) Descargar el modelo base de lenguaje (986 MB, se ejecuta en CPU)
+ollama pull qwen2.5:1.5b
+```
+
+El modelo base elegido es **qwen2.5:1.5b** porque cumple tres condiciones del enunciado: es lo bastante pequeno (1.5 B de parametros) para ejecutarse en un portatil sin GPU dedicada, cabe en la memoria RAM de un equipo convencional y responde en un tiempo razonable para una consulta de inventario. Se descargo con el comando `ollama pull qwen2.5:1.5b`, que descarga los 986 MB del modelo.
+
+Una vez descargado, se crea el modelo propio del proyecto a partir de ese base. El archivo Modelfile.txt contiene la instruccion FROM que lo declara y las reglas de sistema:
+
+```
+FROM qwen2.5:1.5b
+
+SYSTEM """Eres un asistente de inventario de una tienda. Respondes UNICAMENTE
+con los datos reales del inventario que se te proporcionan. Si la informacion
+no esta en los datos, responde que no tienes ese dato. No inventes productos,
+precios ni cantidades. Se breve y usa tablas Markdown cuando el dato lo requiera."""
+```
+
+Y se registra con:
+
+```bash
+# 3) Crear el asistente con las reglas del POS
+ollama create pos-inventario-bot -f Modelfile.txt
+
+# 4) Verificar que quedaron instalados
+ollama list
+```
+
+La salida de `ollama list` confirma que ambos modelos estan presentes:
+
+```
+NAME                         ID              SIZE      MODIFIED
+qwen2.5:1.5b                 65ec06548149    986 MB    10 days ago
+pos-inventario-bot:latest    f6ba89e20845    986 MB    4 days ago
+```
+
+`pos-inventario-bot:latest` ocupa el mismo tamano que el modelo base porque es el mismo modelo con las reglas de sistema agregadas encima. Este es el nombre que la aplicacion consulta, configurado en `OLLAMA_MODELO`.
+
 Servicio que arma el contexto JSON con los productos activos (inventario/ollama_client.py):
 
 ```python
@@ -394,3 +440,50 @@ Durante el desarrollo de Pingux POS, se utilizo OpenCode directamente desde la t
 3. **Manejo de excepciones HTTP y Fallback para Ollama:**
    - *Prompt:* "Escribe un bloque try-except usando httpx que capture errores 404 (modelo no registrado) y timeouts, devolviendo un fallback con datos de SQLite."
    - *Impacto:* Garantizo que la aplicacion nunca se caiga si el servidor local de Ollama esta apagado o saturado.
+# 6. CITAS Y REFERENCIAS
+
+## Documentacion oficial consultada
+
+- **Django 5.2 - Modelos:** https://docs.djangoproject.com/en/5.2/topics/db/models/
+- **Django 5.2 - Consultas (ORM):** https://docs.djangoproject.com/en/5.2/topics/db/queries/
+- **Django 5.2 - Formularios:** https://docs.djangoproject.com/en/5.2/topics/forms/
+- **Django 5.2 - Vistas y URLconf:** https://docs.djangoproject.com/en/5.2/topics/http/views/
+- **Django 5.2 - Pruebas automaticas:** https://docs.djangoproject.com/en/5.2/topics/testing/
+- **Django 5.2 - Panel de administracion:** https://docs.djangoproject.com/en/5.2/ref/contrib/admin/
+- **Django 5.2 - Configuracion:** https://docs.djangoproject.com/en/5.2/ref/settings/
+- **Django 5.2 - Despliegue (checklist):** https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+
+## Documentacion de Ollama
+
+- **Ollama - pagina oficial:** https://ollama.com
+- **Ollama - descarga:** https://ollama.com/download
+- **Ollama - API REST (endpoint /api/generate):** https://github.com/ollama/ollama/blob/main/docs/api.md
+- **Ollama - modelos disponibles (qwen2.5):** https://ollama.com/library/qwen2.5
+- **Ollama - Modelfile (plantillas de modelo):** https://github.com/ollama/ollama/blob/main/docs/modelfile.md
+
+## Documentacion de Python
+
+- **Python 3.11 - modulo venv (entornos virtuales):** https://docs.python.org/es/3.11/library/venv.html
+- **Python 3.11 - modulo sqlite3:** https://docs.python.org/es/3.11/library/sqlite3.html
+
+## Librerias de terceros
+
+- **httpx (cliente HTTP):** https://www.python-httpx.org/
+- **python-dotenv (variables de entorno):** https://pypi.org/project/python-dotenv/
+- **xhtml2pdf (Markdown a PDF):** https://pypi.org/project/xhtml2pdf/
+
+## OpenCode
+
+- **OpenCode - repositorio oficial:** https://github.com/sst/opencode
+- **OpenCode - documentacion:** https://opencode.ai
+
+## Guias de patrones de diseno
+
+- **Refactoring Guru - Strategy (Python):** https://refactoring.guru/design-patterns/strategy/python
+- **Refactoring Guru - Facade (Python):** https://refactoring.guru/design-patterns/facade/python
+
+## ODS vinculados
+
+- **ODS 4 - Educacion de calidad:** https://sdgs.un.org/goals/goal4
+- **ODS 8 - Trabajo decente y crecimiento economico:** https://sdgs.un.org/goals/goal8
+- **ODS 9 - Industria, innovacion e infraestructura:** https://sdgs.un.org/goals/goal9

@@ -208,6 +208,10 @@
             padding: 9px 12px; color: var(--text-main); font-size: 13px; outline: none;
         }
         .form-field textarea { resize: vertical; min-height: 58px; }
+        .form-field select { cursor: pointer; appearance: none; padding-right: 30px; background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%); background-position: calc(100% - 16px) 16px, calc(100% - 11px) 16px; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
+        .form-field .field-hint { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+        .form-field .field-hint a { color: var(--accent); text-decoration: none; font-weight: 600; }
+        .form-field .field-hint a:hover { text-decoration: underline; }
         .form-error { background: var(--danger-bg); border: 1px solid rgba(207, 34, 46, 0.5); color: var(--danger); border-radius: 6px; padding: 9px 12px; font-size: 12px; margin-top: 14px; display: none; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
         .switch-row { display: flex; align-items: center; gap: 9px; margin-top: 22px; min-height: 32px; }
@@ -451,12 +455,17 @@
                     </div>
                     <div class="form-field">
                         <label for="categoria">Categoría *</label>
-                        <input type="text" id="categoria" list="catOptions" required autocomplete="off" placeholder="Elegí o escribí una nueva">
-                        <datalist id="catOptions">
+                        <select id="categoria" required>
+                            <option value="" disabled selected>Elegí una categoría…</option>
                             {% for c in catalogo %}
-                            <option value="{{ c.nombre }}"></option>
+                            <option value="{{ c.nombre }}">{{ c.nombre }}</option>
                             {% endfor %}
-                        </datalist>
+                        </select>
+                        <small class="field-hint">
+                            Solo aparecen las categorías ya registradas, para no crear
+                            duplicados. ¿Falta la que necesitas?
+                            <a href="#" onclick="openCategoryModal(); return false;">Crear categoría nueva</a>
+                        </small>
                     </div>
                     <div class="form-field full">
                         <label for="nombre">Nombre *</label>
@@ -730,8 +739,14 @@
                     ? data.categorias.map(c => `<span class="cat-item">${c.nombre}<span class="cat-count">${c.total_productos}</span><button class="cat-del" title="Eliminar categoría" onclick="deleteCategory(${c.id}, '${c.nombre.replace(/'/g, "\\'")}')"><i class="bi bi-x"></i></button></span>`).join('')
                     : '<span class="cat-empty">Aún no hay categorías registradas.</span>';
 
-                const opciones = document.getElementById('catOptions');
-                if (opciones) opciones.innerHTML = data.categorias.map(c => `<option value="${c.nombre}"></option>`).join('');
+                const selCat = document.getElementById('categoria');
+                if (selCat) {
+                    const previa = selCat.value;
+                    selCat.innerHTML = '<option value="" disabled>Elegí una categoría…</option>'
+                        + data.categorias.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
+                    // conserva la categoria que ya estaba seleccionada
+                    if (previa && data.categorias.some(c => c.nombre === previa)) selCat.value = previa;
+                }
 
                 const sel = document.getElementById('catSelect');
                 const actual = sel.value;
@@ -876,9 +891,13 @@
             document.getElementById('codigo').value = codigo || '';
             document.getElementById('nombre').value = nombre || '';
             document.getElementById('descripcion').value = descripcion || '';
-            const opciones = document.getElementById('catOptions');
-            const sugerida = opciones && opciones.options.length ? opciones.options[0].value : 'General';
-            document.getElementById('categoria').value = categoria || sugerida;
+            const selCat = document.getElementById('categoria');
+            // Al editar, si la categoria del producto no estuviera en el catalogo,
+            // se agrega como opcion para no perder el dato guardado.
+            if (categoria && selCat && ![...selCat.options].some(o => o.value === categoria)) {
+                selCat.add(new Option(categoria, categoria));
+            }
+            selCat.value = categoria || (selCat.options[1] ? selCat.options[1].value : '');
             document.getElementById('precio').value = precio ?? '';
             document.getElementById('cantidad_existente').value = cantidad ?? 0;
             document.getElementById('stock_minimo').value = stockMinimo ?? 5;
@@ -899,12 +918,19 @@
 
         async function saveProduct(event) {
             event.preventDefault();
+            const selCat = document.getElementById('categoria');
+            if (!selCat.value) {
+                const err = document.getElementById('formError');
+                err.textContent = 'Elegí una categoría de la lista. Si no existe la que necesitás, creala primero desde el botón "Categorías".';
+                err.style.display = 'block';
+                return;
+            }
             const fd = new FormData();
             fd.append('id', document.getElementById('pid').value);
             fd.append('codigo', document.getElementById('codigo').value.trim());
             fd.append('nombre', document.getElementById('nombre').value.trim());
             fd.append('descripcion', document.getElementById('descripcion').value.trim());
-            fd.append('categoria', document.getElementById('categoria').value.trim());
+            fd.append('categoria', selCat.value.trim());
             fd.append('precio', document.getElementById('precio').value);
             fd.append('cantidad_existente', document.getElementById('cantidad_existente').value);
             fd.append('stock_minimo', document.getElementById('stock_minimo').value);
